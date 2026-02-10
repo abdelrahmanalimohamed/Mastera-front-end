@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
+import { API_BASE_URL } from '../config/constants'
 
 // Helper component for mobile detail rows
 const DetailRow = ({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) => (
@@ -57,36 +58,8 @@ type Row = {
 
 const companies = ['D100', 'D710', 'BH01', 'DH01', 'B200', 'D600', 'C102', 'C200', 'CH01', 'D500', 'K300', 'B300', 'D300', 'C103', 'C100', 'C400', 'D200', 'B400', 'C101', 'C104', 'B100', 'D400', 'D800', 'SIAC', 'C300', 'D700']
 
-const sampleData = Array.from({ length: 47 }).map((_, i) => ({
-  id: i + 1,
-  partnerNumber: `P${1000 + i}`,
-  companyCode: companies[i % companies.length],
-  name1: `Company ${i + 1}`,
-  name2: `Branch ${((i % 5) + 1)}`,
-  businessGroup: ['Group A', 'Group B', 'Group C'][i % 3],
-  industry: ['Manufacturing', 'Services', 'Trading'][i % 3],
-  phone1: `+971-50-${String(1000 + i).slice(-4)}`,
-  phone2: `+971-4-${String(2000 + i).slice(-4)}`,
-  withTaxType: ['VAT', 'NoVAT'][i % 2],
-  holdingSubject: ['Yes', 'No'][i % 2],
-  searchTerm1: `term${i}`,
-  searchTerm2: `tag${i}`,
-  taxId: `TAX${10000 + i}`,
-  file: null,
-  address: `${i + 1} Business Street, Dubai, UAE`,
-  commercialId: `CR${100000 + i}`,
-  crEndDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-28`,
-  crDaysLeft: Math.floor(Math.random() * 365),
-  taxEndDate: `2025-${String((i % 12) + 1).padStart(2, '0')}-31`,
-  taxDaysLeft: Math.floor(Math.random() * 365),
-  email: `contact${i}@company.ae`,
-  class: ['Class A', 'Class B', 'Class C'][i % 3],
-  blocked: i % 10 === 0,
-  blockReason: i % 10 === 0 ? 'Non-compliance' : '',
-})) as Row[]
-
 export default function DataTablePage() {
-  const [data, setData] = useState<Row[]>(sampleData)
+  const [data, setData] = useState<Row[]>([])
   const [roleFilter, setRoleFilter] = useState<string>('')
   const [query, setQuery] = useState<string>('')
   const [taxIdQuery, setTaxIdQuery] = useState<string>('')
@@ -99,9 +72,104 @@ export default function DataTablePage() {
   const [filterType, setFilterType] = useState<'All' | 'Vendors' | 'Customers'>('All')
   const perPage = 10
 
+  // Server pagination state (cursor-based)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [cursor, setCursor] = useState<number | null>(null)
+  const [hasNextPage, setHasNextPage] = useState(false)
+
   const companiesList = useMemo(() => Array.from(new Set(data.map(d => d.companyCode))).sort(), [data])
 
-  const handleSearch = () => setPage(1)
+  // Track previous filter values to detect filter changes
+  const [prevFilters, setPrevFilters] = useState({ query, taxIdQuery, roleFilter })
+  const [pageCursors, setPageCursors] = useState<(number | null)[]>([null])
+
+
+const buildQueryParams = (cursor: number | null) => {
+  const params = new URLSearchParams()
+  params.set('pageSize', String(perPage))
+  if (cursor !== null) params.set('lastCursorId', String(cursor))
+  if (query) params.set('VendorName', query)
+  if (taxIdQuery) params.set('TaxId', taxIdQuery)
+  if (roleFilter) params.set('CompanyCode', roleFilter)
+  return params.toString()
+}
+const mapPartnerToRow = (it: any): Row => ({
+  id: it.id,
+  partnerNumber: it.bpsapCode ?? '',
+  companyCode: it.companyCode ?? '',
+  name1: it.name1 ?? '',
+  name2: it.name2 ?? '',
+  industry: it.type ?? '',
+  blocked: it.status !== 'Active',
+  blockReason: it.blockReason ?? '',
+  businessGroup: it.businessGroup ?? '',
+  phone1: '',
+  phone2: '',
+  withTaxType: '',
+  holdingSubject: '',
+  searchTerm1: it.searchTerm1 ?? '',
+  searchTerm2: it.searchTerm2 ?? '',
+  taxId: '',
+  file: null,
+  address: '',
+  commercialId: '',
+  crEndDate: '',
+  crDaysLeft: 0,
+  taxEndDate: '',
+  taxDaysLeft: 0,
+  email: '',
+  class: '',
+})
+
+const fetchPartners = useCallback(async (pageIndex: number) => {
+  setLoading(true)
+  try {
+    const cursorForPage = pageCursors[pageIndex] ?? null
+    const qs = buildQueryParams(cursorForPage)
+
+    const res = await fetch(`${API_BASE_URL}/BusinessPartner/get-partners?${qs}`)
+    const json = await res.json()
+
+    setData(json.items.map(mapPartnerToRow))
+
+    setPageCursors(prev => {
+      const next = [...prev]
+      next[pageIndex + 1] = json.nextCursor ?? null
+      return next
+    })
+
+    setHasNextPage(json.hasNextPage)
+  } finally {
+    setLoading(false)
+  }
+}, [query, taxIdQuery, roleFilter, pageCursors])
+
+const handleSearch = () => setPage(1)
+
+  // Effect: When filters change, reset to page 1 and clear old cursors
+  useEffect(() => {
+    const filtersChanged = 
+      query !== prevFilters.query || 
+      taxIdQuery !== prevFilters.taxIdQuery || 
+      roleFilter !== prevFilters.roleFilter
+
+    if (filtersChanged) {
+      setPrevFilters({ query, taxIdQuery, roleFilter })
+      setPage(1)
+      setCursor(null)
+    }
+  }, [query, taxIdQuery, roleFilter, prevFilters])
+
+  useEffect(() => {
+  fetchPartners(page - 1)
+}, [page])
+
+
+useEffect(() => {
+  setPage(1)
+  setPageCursors([null])
+}, [query, taxIdQuery, roleFilter])
+
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -113,45 +181,8 @@ export default function DataTablePage() {
     setPage(1)
   }
 
-  const filtered = useMemo(() => {
-    let result = data.filter(d => {
-      if (roleFilter && d.companyCode !== roleFilter) return false
-      if (blockedOnly && !d.blocked) return false
-      if (query) {
-        const q = query.toLowerCase()
-        if (!(d.name1.toLowerCase().includes(q) || d.name2.toLowerCase().includes(q) || d.searchTerm1.toLowerCase().includes(q) || d.searchTerm2.toLowerCase().includes(q))) return false
-      }
-      if (taxIdQuery) {
-        const tq = taxIdQuery.toLowerCase()
-        if (!d.taxId.toLowerCase().includes(tq)) return false
-      }
-      return true
-    })
-
-    // Apply sorting
-    result.sort((a, b) => {
-      let aVal: any = a[sortBy as keyof Row]
-      let bVal: any = b[sortBy as keyof Row]
-      
-      if (typeof aVal === 'string') {
-        aVal = aVal.toLowerCase()
-        bVal = (bVal as string).toLowerCase()
-      }
-      
-      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
-      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
-      return 0
-    })
-
-    return result
-  }, [data, roleFilter, query, taxIdQuery, blockedOnly, sortBy, sortDir])
-
-  const pages = Math.max(1, Math.ceil(filtered.length / perPage))
-
-  const pageData = useMemo(() => {
-    const start = (page - 1) * perPage
-    return filtered.slice(start, start + perPage)
-  }, [filtered, page])
+  // Client-side filtering/sorting is minimized because server returns filtered page.
+  const pageData = data
 
   const handleFileChange = (id: number, file?: File | null) => {
     setData(prev => prev.map(r => {
@@ -162,9 +193,107 @@ export default function DataTablePage() {
     }))
   }
 
+  const uploadFileToServer = async (businessPartnerId: number | string, file: File) => {
+    try {
+      const fd = new FormData()
+      fd.append('BusinessPartnerId', String(businessPartnerId))
+      fd.append('Attachments', file)
+
+      const res = await fetch(`${API_BASE_URL}/BusinessPartner/upload-file`, {
+        method: 'POST',
+        body: fd,
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `Upload failed with status ${res.status}`)
+      }
+
+      return true
+    } catch (err) {
+      console.error('Upload error', err)
+      return false
+    }
+  }
+
+  const handleFileSelect = async (id: number, files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const file = files[0]
+
+    // Ask for confirmation
+    const ok = window.confirm('Are you sure that you will upload this file ?')
+    if (!ok) return
+
+    setLoading(true)
+    const success = await uploadFileToServer(id, file)
+    setLoading(false)
+
+    if (success) {
+      // update UI with selected file
+      handleFileChange(id, file)
+      alert('File uploaded successfully.')
+    } else {
+      alert('An error occurred while uploading the file.')
+    }
+  }
+
+//   const handleNext = () => {
+//   if (!hasNextPage || loading) return
+//   setPage(p => p + 1)
+//   fetchPartners()
+// }
+
+
   const handleView = (r: Row) => {
-    if (r.file?.url) window.open(r.file.url, '_blank')
-    else alert('No file uploaded for this row')
+    // Fetch full partner details from API and show in modal
+    setLoading(true)
+    fetch(
+      `${API_BASE_URL}/BusinessPartner/get-partners?pageSize=1&SAPCode=${encodeURIComponent(r.partnerNumber)}`
+    )
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch')
+        return res.json()
+      })
+      .then(json => {
+        const item = json.items?.[0]
+        if (item) {
+          const mapped: Row = {
+            id: r.id,
+            partnerNumber: item.bpsapCode ?? r.partnerNumber,
+            companyCode: item.companyCode ?? r.companyCode,
+            name1: item.name1 ?? r.name1,
+            name2: item.name2 ?? r.name2,
+            businessGroup: item.businessGroup ?? r.businessGroup,
+            industry: item.industry ?? r.industry,
+            phone1: item.phone1 ?? r.phone1,
+            phone2: item.phone2 ?? r.phone2,
+            withTaxType: item.withTaxType ?? r.withTaxType,
+            holdingSubject: item.holdingSubject ?? r.holdingSubject,
+            searchTerm1: item.searchTerm1 ?? r.searchTerm1,
+            searchTerm2: item.searchTerm2 ?? r.searchTerm2,
+            taxId: item.taxId ?? r.taxId,
+            file: r.file,
+            address: item.address ?? r.address,
+            commercialId: item.commercialId ?? r.commercialId,
+            crEndDate: item.crEndDate ?? r.crEndDate,
+            crDaysLeft: item.crDaysLeft ?? r.crDaysLeft,
+            taxEndDate: item.taxEndDate ?? r.taxEndDate,
+            taxDaysLeft: item.taxDaysLeft ?? r.taxDaysLeft,
+            email: item.email ?? r.email,
+            class: item.class ?? r.class,
+            blocked: item.blocked ?? r.blocked,
+            blockReason: item.blockReason ?? r.blockReason,
+          }
+          setSelectedRow(mapped)
+        } else {
+          setSelectedRow(r)
+        }
+      })
+      .catch(err => {
+        console.error(err)
+        setSelectedRow(r)
+      })
+      .finally(() => setLoading(false))
   }
 
   return (
@@ -339,10 +468,10 @@ export default function DataTablePage() {
                   <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Name <SortIcon direction={sortBy === 'name1' ? sortDir : null} /></span>
                 </th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold cursor-pointer hover:bg-opacity-75 transition-colors" onClick={() => handleSort('name2')}>
-                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Type <SortIcon direction={sortBy === 'name2' ? sortDir : null} /></span>
+                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Name 2 <SortIcon direction={sortBy === 'name2' ? sortDir : null} /></span>
                 </th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold cursor-pointer hover:bg-opacity-75 transition-colors" onClick={() => handleSort('industry')}>
-                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Industry <SortIcon direction={sortBy === 'industry' ? sortDir : null} /></span>
+                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Type <SortIcon direction={sortBy === 'industry' ? sortDir : null} /></span>
                 </th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold">
                   <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Status</span>
@@ -365,7 +494,7 @@ export default function DataTablePage() {
                       : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50'
                   }`}
                   style={{ animationDelay: `${idx * 30}ms` }}
-                  onClick={() => setSelectedRow(row)}
+                  onClick={() => handleView(row)}
                 >
                   <td className={`px-4 py-3 text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{row.partnerNumber}</td>
                   <td className={`px-4 py-3 text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.companyCode}</td>
@@ -378,7 +507,7 @@ export default function DataTablePage() {
                         ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                         : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                     }`}>
-                      {row.blocked ? '🔒 Blocked' : '✓ Active'}
+                      {row.blocked ? 'Blocked' : 'Active'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs sm:text-sm">
@@ -386,7 +515,7 @@ export default function DataTablePage() {
                       type="file"
                       id={`file-input-${row.id}`}
                       onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => { e.stopPropagation(); handleFileChange(row.id, e.target.files ? e.target.files[0] : null); }}
+                      onChange={(e) => { e.stopPropagation(); handleFileSelect(row.id, e.target.files); }}
                       className="text-xs"
                     />
                   </td>
@@ -413,7 +542,7 @@ export default function DataTablePage() {
                   : 'hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50'
               }`}
               style={{ animationDelay: `${idx * 30}ms` }}
-              onClick={() => setSelectedRow(row)}
+              onClick={() => handleView(row)}
             >
               <div className="space-y-3">
                 <div className="flex justify-between items-start gap-2">
@@ -454,7 +583,7 @@ export default function DataTablePage() {
                     type="file"
                     id={`file-input-mobile-${row.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => { e.stopPropagation(); handleFileChange(row.id, e.target.files ? e.target.files[0] : null); }}
+                    onChange={(e) => { e.stopPropagation(); handleFileSelect(row.id, e.target.files); }}
                     className="hidden"
                   />
                   {row.file && <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>✓ File: {row.file.name}</span>}
@@ -546,13 +675,13 @@ export default function DataTablePage() {
 
       <div className={`flex flex-col sm:flex-row items-center justify-between mt-4 md:mt-6 gap-3 sm:gap-4 p-4 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg animate-slideUp transition-all duration-300`}>
         <div className={`text-xs sm:text-sm text-center sm:text-left ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          📊 Showing {pageData.length === 0 ? 0 : (page - 1) * perPage + 1} to {Math.min(page * perPage, filtered.length)} of {filtered.length} entries
+          📊 Showing {pageData.length} entries — page {page}
         </div>
-        <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
+        <div className="flex items-center gap-2 flex-wrap justify-center">
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 ${
+            className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 ${
               darkMode
                 ? 'bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-gray-300 disabled:text-gray-600'
                 : 'bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 disabled:text-gray-400'
@@ -560,52 +689,15 @@ export default function DataTablePage() {
           >
             ← Prev
           </button>
-          
-          {/* Desktop Pagination */}
-          <div className="hidden sm:flex items-center gap-1">
-            {Array.from({ length: Math.min(pages, 5) }).map((_, i) => {
-              let p: number
-              if (pages <= 5) {
-                p = i + 1
-              } else if (page <= 3) {
-                p = i + 1
-              } else if (page >= pages - 2) {
-                p = pages - 4 + i
-              } else {
-                p = page - 2 + i
-              }
-              return (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 ${
-                    p === page
-                      ? `bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md`
-                      : darkMode
-                      ? 'bg-slate-700 hover:bg-slate-600 text-gray-300'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                  }`}
-                >
-                  {p}
-                </button>
-              )
-            })}
-            {pages > 5 && page < pages - 2 && (
-              <>
-                <span className={`text-gray-400 px-1`}>...</span>
-              </>
-            )}
-          </div>
 
-          {/* Mobile Page Info */}
-          <div className={`sm:hidden text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-600'} px-2`}>
-            {page} / {pages}
+          <div className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            {loading ? 'Loading…' : `Page ${page}`}
           </div>
 
           <button
-            onClick={() => setPage(p => Math.min(pages, p + 1))}
-            disabled={page === pages}
-            className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 ${
+           onClick={() => setPage(p => p + 1)}
+            disabled={!hasNextPage}
+            className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 ${
               darkMode
                 ? 'bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-gray-300 disabled:text-gray-600'
                 : 'bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 text-gray-700 disabled:text-gray-400'
