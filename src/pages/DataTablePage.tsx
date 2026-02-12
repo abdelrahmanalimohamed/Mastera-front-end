@@ -1,5 +1,6 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { API_BASE_URL } from '../config/constants'
+import { suppliesList, type Supply } from '../config/supplies'
 
 // Helper component for mobile detail rows
 const DetailRow = ({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) => (
@@ -19,12 +20,104 @@ const DetailRowDesktop = ({ label, value, highlight = false, darkMode = false }:
   </div>
 )
 
-// Sort indicator component
-const SortIcon = ({ direction }: { direction?: 'asc' | 'desc' | null }) => (
-  <span className="ml-1 inline-block">
-    {direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : '⇅'}
-  </span>
-)
+// Small searchable dropdown component (no external libs; support string or Supply[] with name search)
+function SearchableDropdown({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select...',
+  darkMode = false,
+  displayValue = '',
+}: {
+  options: (string | Supply)[]
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  darkMode?: boolean
+  displayValue?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const ref = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current) return
+      if (!(e.target instanceof Node)) return
+      if (!ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  // extract display text from option; if Supply, use .name, else treat as string
+  const getOptionName = (opt: string | Supply) => {
+    return typeof opt === 'string' ? opt : opt.name
+  }
+
+  const getOptionValue = (opt: string | Supply) => {
+    return typeof opt === 'string' ? opt : opt.code
+  }
+
+  // keep displayed query in sync with selected value when dropdown is closed
+  useEffect(() => {
+    if (!open) setQuery(displayValue || value)
+  }, [value, displayValue, open])
+
+  const filtered = query
+    ? options.filter(o => getOptionName(o).toLowerCase().includes(query.toLowerCase()))
+    : options
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        value={query}
+        onChange={e => {
+          const v = e.target.value
+          setQuery(v)
+          setOpen(true)
+          if (v === '') onChange('')
+        }}
+        onFocus={() => {
+          setOpen(true)
+          // when focusing start with the selected display value or code so user can edit it
+          if (query === '') setQuery(displayValue || value)
+        }}
+        placeholder={placeholder}
+        className={`border rounded-lg px-3 py-2.5 text-sm transition-all duration-200 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+          darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'
+        }`}
+      />
+
+      {open && (
+        <div className={`absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md shadow-lg ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+          {filtered.length === 0 ? (
+            <div className={`px-3 py-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>No results</div>
+          ) : (
+            filtered.map(o => {
+              const oName = getOptionName(o)
+              const oValue = getOptionValue(o)
+              return (
+                <button
+                  key={oValue}
+                  type="button"
+                  onClick={() => {
+                    onChange(oValue)
+                    setQuery(oName)
+                    setOpen(false)
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-100 ${darkMode ? 'hover:bg-slate-700 text-white' : 'text-gray-900'}`}
+                >
+                  {oName}
+                </button>
+              )
+            })
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 type FileRef = { name: string; url: string }
 
@@ -34,6 +127,7 @@ type Row = {
   companyCode: string
   name1: string
   name2: string
+  name3: string | null
   businessGroup: string
   industry: string
   phone1: string
@@ -54,15 +148,58 @@ type Row = {
   class: string
   blocked: boolean
   blockReason: string
+  bpGroup: string
+  telephone1: string
+  telephone2: string
+  faxNumber: string
+  taxStatus: string
+  commercialTaxId: string | null
+  taxIdValidFrom: string
+  taxIdValidTo: string
+  taxIdExpireOn: string
+  commercialIdValidFrom: string
+  commercialIdValidTo: string
+  commercialTaxIdExpireOn: string
+  status: string
 }
 
-const companies = ['D100', 'D710', 'BH01', 'DH01', 'B200', 'D600', 'C102', 'C200', 'CH01', 'D500', 'K300', 'B300', 'D300', 'C103', 'C100', 'C400', 'D200', 'B400', 'C101', 'C104', 'B100', 'D400', 'D800', 'SIAC', 'C300', 'D700']
+const companies = [
+  'B100 - Wajhat Advanced Arch.',
+  'B200 - Fit Interiors',
+  'B300 - Engineering New Cities Co',
+  'B400 - Edge Eng for specialized',
+  'BH01 - SIAC H.for Build Mat&Supp',
+  'C100 - SIAC Construction',
+  'C101 - Qatar Branch',
+  'C102 - Yemen Branch',
+  'C103 - SIAC International Contra',
+  'C104 - SIAC Solutions',
+  'C200 - Edge Construction & Indus',
+  'C300 - STEEL TEC - Enginerring',
+  'C400 - Integrated Real Estate De',
+  'CH01 - SIAC Holding for Eng&Cons',
+  'D100 - Pyramids Development Indu',
+  'D200 - Pyramids Zona Franca Egyp',
+  'D300 - Polaris International Ind',
+  'D400 - Bonyan For Investment & D',
+  'D500 - Group Real Estate Develop',
+  'D600 - Gulf of Suez Development',
+  'D700 - Siac Assets & Facilities',
+  'D710 - Siac Facilities Managemen',
+  'D800 - SIAC Developments',
+  'DH01 - SIAC H.for Develop&Manage',
+  'K300 - Tripple Ten Company',
+  'SIAC - SIAC H.for Fi.Investments'
+];
 
 export default function DataTablePage() {
   const [data, setData] = useState<Row[]>([])
   const [roleFilter, setRoleFilter] = useState<string>('')
+  const [supplyFilter, setSupplyFilter] = useState<string>('')
+  const [supplyFilterDisplay, setSupplyFilterDisplay] = useState<string>('')
   const [query, setQuery] = useState<string>('')
   const [taxIdQuery, setTaxIdQuery] = useState<string>('')
+  const [sapCodeQuery, setSapCodeQuery] = useState<string>('')
   const [page, setPage] = useState<number>(1)
   const [selectedRow, setSelectedRow] = useState<Row | null>(null)
   const [sortBy, setSortBy] = useState<string>('id')
@@ -77,20 +214,44 @@ export default function DataTablePage() {
   const [cursor, setCursor] = useState<number | null>(null)
   const [hasNextPage, setHasNextPage] = useState(false)
 
-  const companiesList = useMemo(() => Array.from(new Set(data.map(d => d.companyCode))).sort(), [data])
+  const companiesList = useMemo(() => Array.from(new Set(companies)).sort(), [])
 
   // Track previous filter values to detect filter changes
-  const [prevFilters, setPrevFilters] = useState({ query, taxIdQuery, roleFilter })
+  const [prevFilters, setPrevFilters] = useState({ query, taxIdQuery, sapCodeQuery, roleFilter, supplyFilter, filterType })
   const [pageCursors, setPageCursors] = useState<(number | null)[]>([null])
+
+  
+const [appliedFilters, setAppliedFilters] = useState({
+  query: '',
+  taxIdQuery: '',
+  roleFilter: '',
+  sapCodeQuery: '',
+  supplyFilter: '',
+  blockedOnly: false,
+  filterType: 'All' as 'All' | 'Vendors' | 'Customers',
+})
+
 
 
 const buildQueryParams = (cursor: number | null) => {
-  const params = new URLSearchParams()
+ const params = new URLSearchParams()
   params.set('pageSize', String(perPage))
+
   if (cursor !== null) params.set('lastCursorId', String(cursor))
-  if (query) params.set('VendorName', query)
-  if (taxIdQuery) params.set('TaxId', taxIdQuery)
-  if (roleFilter) params.set('CompanyCode', roleFilter)
+  if (appliedFilters.query) params.set('VendorName', appliedFilters.query)
+  if (appliedFilters.taxIdQuery) params.set('TaxId', appliedFilters.taxIdQuery)
+  if (appliedFilters.sapCodeQuery) params.set('SAPCode', appliedFilters.sapCodeQuery)
+  if (appliedFilters.roleFilter) params.set('CompanyCode', appliedFilters.roleFilter.split(' - ')[0]) // extract code from "B100 - Wajhat Advanced Arch."
+
+  if (appliedFilters.supplyFilter) params.set('Industry', appliedFilters.supplyFilter)
+  if (appliedFilters.blockedOnly) params.set('BlockedOnly', 'true')
+
+  if (appliedFilters.filterType === 'Vendors') {
+    params.set('IndustryName', 'Vend')
+  } else if (appliedFilters.filterType === 'Customers') {
+    params.set('IndustryName', 'Cust')
+  }
+
   return params.toString()
 }
 const mapPartnerToRow = (it: any): Row => ({
@@ -99,35 +260,55 @@ const mapPartnerToRow = (it: any): Row => ({
   companyCode: it.companyCode ?? '',
   name1: it.name1 ?? '',
   name2: it.name2 ?? '',
+  name3: it.name3 ?? null,
   industry: it.type ?? '',
   blocked: it.status !== 'Active',
   blockReason: it.blockReason ?? '',
   businessGroup: it.businessGroup ?? '',
-  phone1: '',
-  phone2: '',
+  phone1: it.telephone1 ?? '',
+  phone2: it.telephone2 ?? '',
   withTaxType: '',
   holdingSubject: '',
   searchTerm1: it.searchTerm1 ?? '',
   searchTerm2: it.searchTerm2 ?? '',
-  taxId: '',
+  taxId: it.taxId ?? '',
   file: null,
-  address: '',
-  commercialId: '',
-  crEndDate: '',
+  address: it.address ?? '',
+  commercialId: it.commercialId ?? '',
+  crEndDate: it.commercialIdValidTo ?? '',
   crDaysLeft: 0,
-  taxEndDate: '',
+  taxEndDate: it.taxIdValidTo ?? '',
   taxDaysLeft: 0,
   email: '',
-  class: '',
+  class: it.class ?? '',
+  bpGroup: it.bpGroup ?? '',
+  telephone1: it.telephone1 ?? '',
+  telephone2: it.telephone2 ?? '',
+  faxNumber: it.faxNumber ?? '',
+  taxStatus: it.taxStatus ?? '',
+  commercialTaxId: it.commercialTaxId ?? null,
+  taxIdValidFrom: it.taxIdValidFrom ?? '',
+  taxIdValidTo: it.taxIdValidTo ?? '',
+  taxIdExpireOn: it.taxIdExpireOn ?? '',
+  commercialIdValidFrom: it.commercialIdValidFrom ?? '',
+  commercialIdValidTo: it.commercialIdValidTo ?? '',
+  commercialTaxIdExpireOn: it.commercialTaxIdExpireOn ?? '',
+  status: it.status ?? 'Active',
 })
 
-const fetchPartners = useCallback(async (pageIndex: number) => {
+const fetchPartners = useCallback(async (
+  pageIndex: number,
+  cursorForPage: number | null
+) => {
   setLoading(true)
+
   try {
-    const cursorForPage = pageCursors[pageIndex] ?? null
     const qs = buildQueryParams(cursorForPage)
 
-    const res = await fetch(`${API_BASE_URL}/BusinessPartner/get-partners?${qs}`)
+    const res = await fetch(
+      `${API_BASE_URL}/BusinessPartner/get-partners?${qs}`
+    )
+
     const json = await res.json()
 
     setData(json.items.map(mapPartnerToRow))
@@ -139,36 +320,36 @@ const fetchPartners = useCallback(async (pageIndex: number) => {
     })
 
     setHasNextPage(json.hasNextPage)
+
   } finally {
     setLoading(false)
   }
-}, [query, taxIdQuery, roleFilter, pageCursors])
 
-const handleSearch = () => setPage(1)
+}, [appliedFilters])
+
+
 
   // Effect: When filters change, reset to page 1 and clear old cursors
   useEffect(() => {
     const filtersChanged = 
       query !== prevFilters.query || 
-      taxIdQuery !== prevFilters.taxIdQuery || 
-      roleFilter !== prevFilters.roleFilter
+      taxIdQuery !== prevFilters.taxIdQuery ||
+      sapCodeQuery !== prevFilters.sapCodeQuery ||
+      roleFilter !== prevFilters.roleFilter ||
+      supplyFilter !== prevFilters.supplyFilter ||
+      filterType !== prevFilters.filterType
 
     if (filtersChanged) {
-      setPrevFilters({ query, taxIdQuery, roleFilter })
+      setPrevFilters({ query, taxIdQuery, sapCodeQuery, roleFilter, supplyFilter, filterType })
       setPage(1)
       setCursor(null)
     }
-  }, [query, taxIdQuery, roleFilter, prevFilters])
-
-  useEffect(() => {
-  fetchPartners(page - 1)
-}, [page])
-
+  }, [query, taxIdQuery, roleFilter, supplyFilter, filterType, prevFilters])
 
 useEffect(() => {
-  setPage(1)
-  setPageCursors([null])
-}, [query, taxIdQuery, roleFilter])
+  const cursorForPage = pageCursors[page - 1] ?? null
+  fetchPartners(page - 1, cursorForPage)
+}, [page, appliedFilters])
 
 
   const handleSort = (field: string) => {
@@ -216,6 +397,29 @@ useEffect(() => {
     }
   }
 
+  const editFileOnServer = async (businessPartnerId: number | string, file: File) => {
+    try {
+      const fd = new FormData()
+      fd.append('BusinessPartnerId', String(businessPartnerId))
+      fd.append('Attachments', file)
+
+      const res = await fetch(`${API_BASE_URL}/BusinessPartner/edit-upload-file`, {
+        method: 'POST',
+        body: fd,
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(text || `Edit upload failed with status ${res.status}`)
+      }
+
+      return true
+    } catch (err) {
+      console.error('Edit upload error', err)
+      return false
+    }
+  }
+
   const handleFileSelect = async (id: number, files: FileList | null) => {
     if (!files || files.length === 0) return
     const file = files[0]
@@ -237,6 +441,27 @@ useEffect(() => {
     }
   }
 
+  const handleEditFileSelect = async (id: number, files: FileList | null) => {
+    if (!files || files.length === 0) return
+    const file = files[0]
+
+    // Ask for confirmation
+    const ok = window.confirm('Are you sure that you will upload this file ?')
+    if (!ok) return
+
+    setLoading(true)
+    const success = await editFileOnServer(id, file)
+    setLoading(false)
+
+    if (success) {
+      // update UI with selected file
+      handleFileChange(id, file)
+      alert('File updated successfully.')
+    } else {
+      alert('An error occurred while updating the file.')
+    }
+  }
+
 //   const handleNext = () => {
 //   if (!hasNextPage || loading) return
 //   setPage(p => p + 1)
@@ -244,50 +469,46 @@ useEffect(() => {
 // }
 
 
+  const handleViewFile = async (id: number) => {
+    // Call the view-file endpoint and download/view the PDF
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_BASE_URL}/BusinessPartner/view-file/${id}`)
+      
+    if (!response.ok) {
+      const errorData = await response.json();
+      alert(errorData.message);
+      return;
+    }
+
+      // Get the blob from the response
+      const blob = await response.blob()
+
+      // Create a URL for the blob and open it in a new tab
+      const fileUrl = URL.createObjectURL(blob)
+      window.open(fileUrl, '_blank')
+
+      // Clean up the URL after a delay to allow the browser to load it
+      setTimeout(() => URL.revokeObjectURL(fileUrl), 1000)
+    } catch (err) {
+      console.error('Error viewing file:', err)
+      alert('Failed to view the file. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleView = (r: Row) => {
     // Fetch full partner details from API and show in modal
     setLoading(true)
-    fetch(
-      `${API_BASE_URL}/BusinessPartner/get-partners?pageSize=1&SAPCode=${encodeURIComponent(r.partnerNumber)}`
-    )
+    fetch(`${API_BASE_URL}/BusinessPartner/get-partner-details/${r.id}`)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch')
         return res.json()
       })
-      .then(json => {
-        const item = json.items?.[0]
-        if (item) {
-          const mapped: Row = {
-            id: r.id,
-            partnerNumber: item.bpsapCode ?? r.partnerNumber,
-            companyCode: item.companyCode ?? r.companyCode,
-            name1: item.name1 ?? r.name1,
-            name2: item.name2 ?? r.name2,
-            businessGroup: item.businessGroup ?? r.businessGroup,
-            industry: item.industry ?? r.industry,
-            phone1: item.phone1 ?? r.phone1,
-            phone2: item.phone2 ?? r.phone2,
-            withTaxType: item.withTaxType ?? r.withTaxType,
-            holdingSubject: item.holdingSubject ?? r.holdingSubject,
-            searchTerm1: item.searchTerm1 ?? r.searchTerm1,
-            searchTerm2: item.searchTerm2 ?? r.searchTerm2,
-            taxId: item.taxId ?? r.taxId,
-            file: r.file,
-            address: item.address ?? r.address,
-            commercialId: item.commercialId ?? r.commercialId,
-            crEndDate: item.crEndDate ?? r.crEndDate,
-            crDaysLeft: item.crDaysLeft ?? r.crDaysLeft,
-            taxEndDate: item.taxEndDate ?? r.taxEndDate,
-            taxDaysLeft: item.taxDaysLeft ?? r.taxDaysLeft,
-            email: item.email ?? r.email,
-            class: item.class ?? r.class,
-            blocked: item.blocked ?? r.blocked,
-            blockReason: item.blockReason ?? r.blockReason,
-          }
-          setSelectedRow(mapped)
-        } else {
-          setSelectedRow(r)
-        }
+      .then(item => {
+        const mapped: Row = mapPartnerToRow(item)
+        setSelectedRow(mapped)
       })
       .catch(err => {
         console.error(err)
@@ -295,6 +516,23 @@ useEffect(() => {
       })
       .finally(() => setLoading(false))
   }
+
+  const handleSearch = () => {
+  setAppliedFilters({
+    query,
+    taxIdQuery,
+    sapCodeQuery,
+    roleFilter,
+    supplyFilter,
+    blockedOnly,
+    filterType,
+  })
+
+  setPage(1)
+  setPageCursors([null])
+}
+
+
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-slate-900' : 'bg-gray-50'}`}>
@@ -383,12 +621,29 @@ useEffect(() => {
                 </select>
               </div>
 
+              <div className="flex flex-col">
+                <label className={`text-xs sm:text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category</label>
+                <SearchableDropdown
+                  options={suppliesList}
+                  value={supplyFilter}
+                  onChange={code => {
+                    setSupplyFilter(code)
+                    // find the corresponding name and store it for display
+                    const supply = suppliesList.find(s => s.code === code)
+                    setSupplyFilterDisplay(supply ? supply.name : '')
+                  }}
+                  displayValue={supplyFilterDisplay}
+                  placeholder="Select category..."
+                  darkMode={darkMode}
+                />
+              </div>
+
               <div className="flex flex-col sm:col-span-2 lg:col-span-1">
                 <label className={`text-xs sm:text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Search</label>
                 <input
                   value={query}
                   onChange={e => setQuery(e.target.value)}
-                  placeholder="Search name or term..."
+                  placeholder="Search by name1 or name2..."
                   className={`border rounded-lg px-3 py-2.5 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     darkMode
                       ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400'
@@ -403,6 +658,20 @@ useEffect(() => {
                   value={taxIdQuery}
                   onChange={e => setTaxIdQuery(e.target.value)}
                   placeholder="Tax-Id..."
+                  className={`border rounded-lg px-3 py-2.5 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    darkMode
+                      ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400'
+                      : 'bg-white border-gray-300 text-gray-900'
+                  }`}
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className={`text-xs sm:text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>SAP Code</label>
+                <input
+                  value={sapCodeQuery}
+                  onChange={e => setSapCodeQuery(e.target.value)}
+                  placeholder="SAP Code..."
                   className={`border rounded-lg px-3 py-2.5 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     darkMode
                       ? 'bg-slate-700 border-slate-600 text-white placeholder-gray-400'
@@ -438,15 +707,45 @@ useEffect(() => {
                 🔍 Search
               </button>
               <button
-                onClick={() => { setRoleFilter(''); setQuery(''); setTaxIdQuery(''); setBlockedOnly(false); setFilterType('All'); setPage(1) }}
-                className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                  darkMode
-                    ? 'bg-slate-700 hover:bg-slate-600 text-gray-300'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                ↺ Reset
-              </button>
+  onClick={() => {
+    // reset UI inputs
+    setRoleFilter('')
+    setSupplyFilter('')
+    setSupplyFilterDisplay('')
+    setQuery('')
+    setTaxIdQuery('')
+    setSapCodeQuery('')
+    setBlockedOnly(false)
+    setFilterType('All')
+
+    // reset applied filters (IMPORTANT)
+    setAppliedFilters({
+      query: '',
+      taxIdQuery: '',
+      sapCodeQuery: '',
+      roleFilter: '',
+      supplyFilter: '',
+      blockedOnly: false,
+      filterType: 'All',
+    })
+
+    // reset pagination
+    setPage(1)
+    setPageCursors([null])
+    setCursor(null)
+
+    // optionally clear data instantly (optional)
+    // setData([])
+  }}
+  className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+    darkMode
+      ? 'bg-slate-700 hover:bg-slate-600 text-gray-300'
+      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+  }`}
+>
+  ↺ Reset
+</button>
+
             </div>
           </div>
         </div>
@@ -459,19 +758,19 @@ useEffect(() => {
             <thead className={`${darkMode ? 'bg-slate-700' : 'bg-gradient-to-r from-blue-50 to-indigo-50'}`}>
               <tr>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold cursor-pointer hover:bg-opacity-75 transition-colors" onClick={() => handleSort('partnerNumber')}>
-                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Partner # <SortIcon direction={sortBy === 'partnerNumber' ? sortDir : null} /></span>
+                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Partner #</span>
                 </th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold cursor-pointer hover:bg-opacity-75 transition-colors" onClick={() => handleSort('companyCode')}>
-                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Company <SortIcon direction={sortBy === 'companyCode' ? sortDir : null} /></span>
-                </th>
+                {/* <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold cursor-pointer hover:bg-opacity-75 transition-colors" onClick={() => handleSort('companyCode')}>
+                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Company</span>
+                </th> */}
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold cursor-pointer hover:bg-opacity-75 transition-colors" onClick={() => handleSort('name1')}>
-                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Name <SortIcon direction={sortBy === 'name1' ? sortDir : null} /></span>
+                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Name 1</span>
                 </th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold cursor-pointer hover:bg-opacity-75 transition-colors" onClick={() => handleSort('name2')}>
-                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Name 2 <SortIcon direction={sortBy === 'name2' ? sortDir : null} /></span>
+                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Name 2</span>
                 </th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold cursor-pointer hover:bg-opacity-75 transition-colors" onClick={() => handleSort('industry')}>
-                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Type <SortIcon direction={sortBy === 'industry' ? sortDir : null} /></span>
+                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Type</span>
                 </th>
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold">
                   <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Status</span>
@@ -497,7 +796,6 @@ useEffect(() => {
                   onClick={() => handleView(row)}
                 >
                   <td className={`px-4 py-3 text-xs sm:text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{row.partnerNumber}</td>
-                  <td className={`px-4 py-3 text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.companyCode}</td>
                   <td className={`px-4 py-3 text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.name1}</td>
                   <td className={`px-4 py-3 text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.name2}</td>
                   <td className={`px-4 py-3 text-xs sm:text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{row.industry}</td>
@@ -513,18 +811,49 @@ useEffect(() => {
                   <td className="px-4 py-3 text-xs sm:text-sm">
                     <input
                       type="file"
-                      id={`file-input-${row.id}`}
+                      id={`file-input-edit-${row.id}`}
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => { e.stopPropagation(); handleFileSelect(row.id, e.target.files); }}
                       className="text-xs"
                     />
                   </td>
                   <td className="px-4 py-3 text-xs sm:text-sm">
-                    <div className="flex gap-2 flex-wrap">
-                      <button onClick={(e) => { e.stopPropagation(); document.getElementById(`file-input-${row.id}`)?.click(); }} className="px-2 py-1 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm">✏️ Edit</button>
-                      <button onClick={(e) => { e.stopPropagation(); handleView(row); }} className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm">👁️ View</button>
-                    </div>
-                  </td>
+  {/* Hidden file input */}
+  <input
+    type="file"
+    id={`file-upload-edit-${row.id}`}
+    onClick={(e) => e.stopPropagation()}
+    onChange={(e) => {
+      e.stopPropagation();
+      handleEditFileSelect(row.id, e.target.files);
+    }}
+    className="hidden"
+  />
+
+  {/* Action buttons */}
+  <div className="flex gap-2 items-center">
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        document.getElementById(`file-upload-edit-${row.id}`)?.click();
+      }}
+      className="px-2 py-1 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm"
+    >
+      ✏️ Edit
+    </button>
+
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleViewFile(row.id);
+      }}
+      className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm"
+    >
+      👁️ View
+    </button>
+  </div>
+</td>
+
                 </tr>
               ))}
             </tbody>
@@ -581,17 +910,17 @@ useEffect(() => {
                 <div className="flex flex-col gap-2 pt-2">
                   <input
                     type="file"
-                    id={`file-input-mobile-${row.id}`}
+                    id={`file-input-edit-mobile-${row.id}`}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => { e.stopPropagation(); handleFileSelect(row.id, e.target.files); }}
+                    onChange={(e) => { e.stopPropagation(); handleEditFileSelect(row.id, e.target.files); }}
                     className="hidden"
                   />
                   {row.file && <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>✓ File: {row.file.name}</span>}
                 </div>
 
                 <div className="flex gap-2 pt-2 flex-wrap">
-                  <button onClick={(e) => { e.stopPropagation(); document.getElementById(`file-input-mobile-${row.id}`)?.click(); }} className="flex-1 min-w-[80px] px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm">✏️ Edit</button>
-                  <button onClick={(e) => { e.stopPropagation(); handleView(row); }} className="flex-1 min-w-[80px] px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm">👁️ View</button>
+                  <button onClick={(e) => { e.stopPropagation(); document.getElementById(`file-input-edit-mobile-${row.id}`)?.click(); }} className="flex-1 min-w-[80px] px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm">✏️ Edit</button>
+                  <button onClick={(e) => { e.stopPropagation(); handleViewFile(row.id); }} className="flex-1 min-w-[80px] px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm">👁️ View</button>
                 </div>
               </div>
             </div>
@@ -618,51 +947,47 @@ useEffect(() => {
               {/* Desktop Grid View */}
               <div className="hidden sm:grid gap-4 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailRowDesktop label="Name 1" value={selectedRow.name1} darkMode={darkMode} />
-                  <DetailRowDesktop label="Name 2" value={selectedRow.name2} darkMode={darkMode} />
-                  <DetailRowDesktop label="Address" value={selectedRow.address} darkMode={darkMode} />
-                  <DetailRowDesktop label="Commercial ID" value={selectedRow.commercialId} darkMode={darkMode} />
-                  <DetailRowDesktop label="Tax ID" value={selectedRow.taxId} darkMode={darkMode} />
-                  <DetailRowDesktop label="Email" value={selectedRow.email} darkMode={darkMode} />
-                  <DetailRowDesktop label="Phone 1" value={selectedRow.phone1} darkMode={darkMode} />
-                  <DetailRowDesktop label="Phone 2" value={selectedRow.phone2} darkMode={darkMode} />
-                  <DetailRowDesktop label="Industry" value={selectedRow.industry} darkMode={darkMode} />
-                  <DetailRowDesktop label="Business Group" value={selectedRow.businessGroup} darkMode={darkMode} />
                   <DetailRowDesktop label="Class" value={selectedRow.class} darkMode={darkMode} />
-                  <DetailRowDesktop label="CR End Date" value={selectedRow.crEndDate} darkMode={darkMode} />
-                  <DetailRowDesktop label="CR Days Left" value={selectedRow.crDaysLeft.toString()} darkMode={darkMode} highlight={selectedRow.crDaysLeft < 30} />
-                  <DetailRowDesktop label="Tax End Date" value={selectedRow.taxEndDate} darkMode={darkMode} />
-                  <DetailRowDesktop label="Tax Days Left" value={selectedRow.taxDaysLeft.toString()} darkMode={darkMode} highlight={selectedRow.taxDaysLeft < 30} />
-                  <DetailRowDesktop label="Blocked" value={selectedRow.blocked ? 'Yes' : 'No'} darkMode={darkMode} highlight={selectedRow.blocked} />
-                  {selectedRow.blocked && (
-                    <DetailRowDesktop label="Block Reason" value={selectedRow.blockReason || 'N/A'} darkMode={darkMode} />
-                  )}
+                  <DetailRowDesktop label="Name" value={selectedRow.name1} darkMode={darkMode} />
+                  <DetailRowDesktop label="BP Group" value={selectedRow.bpGroup} darkMode={darkMode} />
+                  <DetailRowDesktop label="Status" value={selectedRow.status} darkMode={darkMode} highlight={selectedRow.status !== 'Active'} />
+                  <DetailRowDesktop label="Telephone 1" value={selectedRow.telephone1} darkMode={darkMode} />
+                  <DetailRowDesktop label="Telephone 2" value={selectedRow.telephone2} darkMode={darkMode} />
+                  <DetailRowDesktop label="Fax Number" value={selectedRow.faxNumber} darkMode={darkMode} />
+                  <DetailRowDesktop label="Address" value={selectedRow.address} darkMode={darkMode} />
+                  <DetailRowDesktop label="Tax Status" value={selectedRow.taxStatus} darkMode={darkMode} />
+                  <DetailRowDesktop label="Commercial Tax ID" value={selectedRow.commercialTaxId || 'N/A'} darkMode={darkMode} />
+                  <DetailRowDesktop label="Tax ID" value={selectedRow.taxId} darkMode={darkMode} />
+                  <DetailRowDesktop label="Tax ID Valid From" value={selectedRow.taxIdValidFrom} darkMode={darkMode} />
+                  <DetailRowDesktop label="Tax ID Valid To" value={selectedRow.taxIdValidTo} darkMode={darkMode} />
+                  <DetailRowDesktop label="Tax ID Expire On" value={selectedRow.taxIdExpireOn} darkMode={darkMode} />
+                  <DetailRowDesktop label="Commercial ID Valid From" value={selectedRow.commercialIdValidFrom} darkMode={darkMode} />
+                  <DetailRowDesktop label="Commercial ID Valid To" value={selectedRow.commercialIdValidTo} darkMode={darkMode} />
+                  <DetailRowDesktop label="Commercial Tax ID Expire On" value={selectedRow.commercialTaxIdExpireOn} darkMode={darkMode} highlight={selectedRow.commercialTaxIdExpireOn === 'Expire'} />
+                  <DetailRowDesktop label="Block Reason" value={selectedRow.blockReason || 'N/A'} darkMode={darkMode} />
                 </div>
               </div>
 
               {/* Mobile Stack View */}
               <div className="sm:hidden space-y-3">
-                <DetailRow label="Name 1" value={selectedRow.name1} />
-                <DetailRow label="Name 2" value={selectedRow.name2} />
-                <DetailRow label="Partner #" value={selectedRow.partnerNumber} />
-                <DetailRow label="Company" value={selectedRow.companyCode} />
-                <DetailRow label="Address" value={selectedRow.address} />
-                <DetailRow label="Commercial ID" value={selectedRow.commercialId} />
-                <DetailRow label="Tax ID" value={selectedRow.taxId} />
-                <DetailRow label="Email" value={selectedRow.email} />
-                <DetailRow label="Phone 1" value={selectedRow.phone1} />
-                <DetailRow label="Phone 2" value={selectedRow.phone2} />
-                <DetailRow label="Industry" value={selectedRow.industry} />
-                <DetailRow label="Business Group" value={selectedRow.businessGroup} />
                 <DetailRow label="Class" value={selectedRow.class} />
-                <DetailRow label="CR End Date" value={selectedRow.crEndDate} />
-                <DetailRow label="CR Days Left" value={selectedRow.crDaysLeft.toString()} highlight={selectedRow.crDaysLeft < 30} />
-                <DetailRow label="Tax End Date" value={selectedRow.taxEndDate} />
-                <DetailRow label="Tax Days Left" value={selectedRow.taxDaysLeft.toString()} highlight={selectedRow.taxDaysLeft < 30} />
-                <DetailRow label="Blocked" value={selectedRow.blocked ? 'Yes' : 'No'} highlight={selectedRow.blocked} />
-                {selectedRow.blocked && (
-                  <DetailRow label="Block Reason" value={selectedRow.blockReason || 'N/A'} />
-                )}
+                <DetailRow label="Name" value={selectedRow.name1} />
+                <DetailRow label="BP Group" value={selectedRow.bpGroup} />
+                <DetailRow label="Status" value={selectedRow.status} highlight={selectedRow.status !== 'Active'} />
+                <DetailRow label="Telephone 1" value={selectedRow.telephone1} />
+                <DetailRow label="Telephone 2" value={selectedRow.telephone2} />
+                <DetailRow label="Fax Number" value={selectedRow.faxNumber} />
+                <DetailRow label="Address" value={selectedRow.address} />
+                <DetailRow label="Tax Status" value={selectedRow.taxStatus} />
+                <DetailRow label="Commercial Tax ID" value={selectedRow.commercialTaxId || 'N/A'} />
+                <DetailRow label="Tax ID" value={selectedRow.taxId} />
+                <DetailRow label="Tax ID Valid From" value={selectedRow.taxIdValidFrom} />
+                <DetailRow label="Tax ID Valid To" value={selectedRow.taxIdValidTo} />
+                <DetailRow label="Tax ID Expire On" value={selectedRow.taxIdExpireOn} />
+                <DetailRow label="Commercial ID Valid From" value={selectedRow.commercialIdValidFrom} />
+                <DetailRow label="Commercial ID Valid To" value={selectedRow.commercialIdValidTo} />
+                <DetailRow label="Commercial Tax ID Expire On" value={selectedRow.commercialTaxIdExpireOn} highlight={selectedRow.commercialTaxIdExpireOn === 'Expire'} />
+                <DetailRow label="Block Reason" value={selectedRow.blockReason || 'N/A'} />
               </div>
 
               <div className="mt-6">
