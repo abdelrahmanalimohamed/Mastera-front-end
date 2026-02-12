@@ -161,6 +161,7 @@ type Row = {
   commercialIdValidTo: string
   commercialTaxIdExpireOn: string
   status: string
+  isFileAttached: boolean
 }
 
 const companies = [
@@ -294,6 +295,7 @@ const mapPartnerToRow = (it: any): Row => ({
   commercialIdValidTo: it.commercialIdValidTo ?? '',
   commercialTaxIdExpireOn: it.commercialTaxIdExpireOn ?? '',
   status: it.status ?? 'Active',
+  isFileAttached: it.isFileAttached ?? false,
 })
 
 const fetchPartners = useCallback(async (
@@ -809,13 +811,15 @@ useEffect(() => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs sm:text-sm">
-                    <input
-                      type="file"
-                      id={`file-input-edit-${row.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => { e.stopPropagation(); handleFileSelect(row.id, e.target.files); }}
-                      className="text-xs"
-                    />
+                    {!row.isFileAttached && (
+                      <input
+                        type="file"
+                        id={`file-input-edit-${row.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => { e.stopPropagation(); handleFileSelect(row.id, e.target.files); }}
+                        className="text-xs"
+                      />
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs sm:text-sm">
   {/* Hidden file input */}
@@ -830,28 +834,30 @@ useEffect(() => {
     className="hidden"
   />
 
-  {/* Action buttons */}
-  <div className="flex gap-2 items-center">
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        document.getElementById(`file-upload-edit-${row.id}`)?.click();
-      }}
-      className="px-2 py-1 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm"
-    >
-      ✏️ Edit
-    </button>
+  {/* Action buttons - visible only if file is attached */}
+  {row.isFileAttached && (
+    <div className="flex gap-2 items-center">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          document.getElementById(`file-upload-edit-${row.id}`)?.click();
+        }}
+        className="px-2 py-1 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm"
+      >
+        ✏️ Edit
+      </button>
 
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        handleViewFile(row.id);
-      }}
-      className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm"
-    >
-      👁️ View
-    </button>
-  </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleViewFile(row.id);
+        }}
+        className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm"
+      >
+        👁️ View
+      </button>
+    </div>
+  )}
 </td>
 
                 </tr>
@@ -908,20 +914,27 @@ useEffect(() => {
                 </div>
 
                 <div className="flex flex-col gap-2 pt-2">
-                  <input
-                    type="file"
-                    id={`file-input-edit-mobile-${row.id}`}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => { e.stopPropagation(); handleEditFileSelect(row.id, e.target.files); }}
-                    className="hidden"
-                  />
                   {row.file && <span className={`text-xs ${darkMode ? 'text-green-400' : 'text-green-600'}`}>✓ File: {row.file.name}</span>}
                 </div>
 
-                <div className="flex gap-2 pt-2 flex-wrap">
-                  <button onClick={(e) => { e.stopPropagation(); document.getElementById(`file-input-edit-mobile-${row.id}`)?.click(); }} className="flex-1 min-w-[80px] px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm">✏️ Edit</button>
-                  <button onClick={(e) => { e.stopPropagation(); handleViewFile(row.id); }} className="flex-1 min-w-[80px] px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm">👁️ View</button>
-                </div>
+                {row.isFileAttached && (
+                  <>
+                    <input
+                      type="file"
+                      id={`file-upload-edit-mobile-${row.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleEditFileSelect(row.id, e.target.files);
+                      }}
+                      className="hidden"
+                    />
+                    <div className="flex gap-2 pt-2 flex-wrap">
+                      <button onClick={(e) => { e.stopPropagation(); document.getElementById(`file-upload-edit-mobile-${row.id}`)?.click(); }} className="flex-1 min-w-[80px] px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 active:scale-95 transition-all duration-200 shadow-sm">✏️ Edit</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleViewFile(row.id); }} className="flex-1 min-w-[80px] px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm">👁️ View</button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           ))}
