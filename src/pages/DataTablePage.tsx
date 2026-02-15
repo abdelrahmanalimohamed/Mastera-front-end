@@ -232,7 +232,7 @@ const [appliedFilters, setAppliedFilters] = useState({
   filterType: 'All' as 'All' | 'Vendors' | 'Customers',
 })
 
-
+const role = localStorage.getItem('role') || '';
 
 const buildQueryParams = (cursor: number | null) => {
  const params = new URLSearchParams()
@@ -296,6 +296,8 @@ const mapPartnerToRow = (it: any): Row => ({
   commercialTaxIdExpireOn: it.commercialTaxIdExpireOn ?? '',
   status: it.status ?? 'Active',
   isFileAttached: it.isFileAttached ?? false,
+  //   industry: it.industries ? it.industries.join(', ') : it.type ?? '',
+  // companyCode: it.companies ? it.companies.join(', ') : it.companyCode ?? '',
 })
 
 const fetchPartners = useCallback(async (
@@ -547,7 +549,7 @@ useEffect(() => {
             </h2>
             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>Manage and monitor your vendor database</p>
           </div>
-          <button
+          {/* <button
             onClick={() => setDarkMode(!darkMode)}
             className={`p-2 md:p-3 rounded-lg transition-all duration-300 ${
               darkMode
@@ -557,7 +559,19 @@ useEffect(() => {
             title="Toggle dark mode"
           >
             {darkMode ? '☀️' : '🌙'}
-          </button>
+          </button> */}
+
+           {/* Logout */}
+    <button
+      onClick={() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('role')
+        window.location.href = '/'  // redirect to login
+      }}
+      className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all duration-200"
+    >
+      Logout
+    </button>
         </div>
 
         {/* Filters Card */}
@@ -811,7 +825,7 @@ useEffect(() => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs sm:text-sm">
-                    {!row.isFileAttached && (
+                    {!row.isFileAttached && role === 'Admin' && (
                       <input
                         type="file"
                         id={`file-input-edit-${row.id}`}
@@ -837,6 +851,7 @@ useEffect(() => {
   {/* Action buttons - visible only if file is attached */}
   {row.isFileAttached && (
     <div className="flex gap-2 items-center">
+       {role === 'Admin' && (
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -846,6 +861,7 @@ useEffect(() => {
       >
         ✏️ Edit
       </button>
+      )}
 
       <button
         onClick={(e) => {
