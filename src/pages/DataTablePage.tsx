@@ -162,6 +162,8 @@ type Row = {
   commercialTaxIdExpireOn: string
   status: string
   isFileAttached: boolean
+  industries: string
+  companies: string
 }
 
 const companies = [
@@ -296,8 +298,8 @@ const mapPartnerToRow = (it: any): Row => ({
   commercialTaxIdExpireOn: it.commercialTaxIdExpireOn ?? '',
   status: it.status ?? 'Active',
   isFileAttached: it.isFileAttached ?? false,
-  //   industry: it.industries ? it.industries.join(', ') : it.type ?? '',
-  // companyCode: it.companies ? it.companies.join(', ') : it.companyCode ?? '',
+  industries: it.industries ?? '',
+  companies: it.companies ??  '',
 })
 
 const fetchPartners = useCallback(async (
@@ -978,7 +980,7 @@ useEffect(() => {
               <div className="hidden sm:grid gap-4 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <DetailRowDesktop label="Class" value={selectedRow.class} darkMode={darkMode} />
-                  <DetailRowDesktop label="Name" value={selectedRow.name1}/>
+                  <DetailRowDesktop label="Name" value={selectedRow.name3}/>
                   <DetailRowDesktop label="BP Group" value={selectedRow.bpGroup} darkMode={darkMode} />
                   <DetailRowDesktop label="Status" value={selectedRow.status} darkMode={darkMode} highlight={selectedRow.status !== 'Active'} />
                   <DetailRowDesktop label="Telephone 1" value={selectedRow.telephone1} darkMode={darkMode} />
@@ -995,6 +997,8 @@ useEffect(() => {
                   <DetailRowDesktop label="Commercial ID Valid To" value={selectedRow.commercialIdValidTo} darkMode={darkMode} />
                   <DetailRowDesktop label="Commercial Tax ID Expire On" value={selectedRow.commercialTaxIdExpireOn} darkMode={darkMode} highlight={selectedRow.commercialTaxIdExpireOn === 'Expire'} />
                   <DetailRowDesktop label="Block Reason" value={selectedRow.blockReason || 'N/A'} darkMode={darkMode} />
+                  <DetailRowDesktop label="Industry" value={selectedRow.industries || 'N/A'} darkMode={darkMode} />
+                  <DetailRowDesktop label="Company" value={selectedRow.companies || 'N/A'} darkMode={darkMode} />
                 </div>
               </div>
 
@@ -1018,6 +1022,8 @@ useEffect(() => {
                 <DetailRow label="Commercial ID Valid To" value={selectedRow.commercialIdValidTo} />
                 <DetailRow label="Commercial Tax ID Expire On" value={selectedRow.commercialTaxIdExpireOn} highlight={selectedRow.commercialTaxIdExpireOn === 'Expire'} />
                 <DetailRow label="Block Reason" value={selectedRow.blockReason || 'N/A'} />
+                  <DetailRowDesktop label="Industry" value={selectedRow.industries || 'N/A'} darkMode={darkMode} />
+                  <DetailRowDesktop label="Company" value={selectedRow.companies || 'N/A'} darkMode={darkMode} />
               </div>
 
               <div className="mt-6">
