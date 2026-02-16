@@ -20,6 +20,33 @@ const DetailRowDesktop = ({ label, value, highlight = false, darkMode = false }:
   </div>
 )
 
+const Section = ({ title, children }: any) => (
+  <div>
+    <h1 className="text-sm font-extrabold uppercase tracking-wide text-gray-500 mb-4 border-b pb-2">
+      {title}
+    </h1>
+    {children}
+  </div>
+)
+
+const Grid = ({ children }: any) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {children}
+  </div>
+)
+
+const Field = ({ label, value, children, full = false }: any) => (
+  <div className={full ? 'md:col-span-2' : ''}>
+    <label className="text-xs font-semibold uppercase text-gray-500 block mb-1">
+      {label}
+    </label>
+    <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
+      {children || value || 'N/A'}
+    </div>
+  </div>
+)
+
+
 // Small searchable dropdown component (no external libs; support string or Supply[] with name search)
 function SearchableDropdown({
   options,
@@ -426,9 +453,16 @@ useEffect(() => {
     }
   }
 
+  const isPdf = (file: File) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
   const handleFileSelect = async (id: number, files: FileList | null) => {
     if (!files || files.length === 0) return
     const file = files[0]
+
+  if (!isPdf(file)) {
+    alert('Only PDF files are allowed!');
+    return;
+  }
 
     // Ask for confirmation
     const ok = window.confirm('Are you sure that you will upload this file ?')
@@ -441,7 +475,8 @@ useEffect(() => {
     if (success) {
       // update UI with selected file
       handleFileChange(id, file)
-      alert('File uploaded successfully.')
+      alert('File uploaded successfully.');
+      location.reload();
     } else {
       alert('An error occurred while uploading the file.')
     }
@@ -450,6 +485,11 @@ useEffect(() => {
   const handleEditFileSelect = async (id: number, files: FileList | null) => {
     if (!files || files.length === 0) return
     const file = files[0]
+
+  if (!isPdf(file)) {
+    alert('Only PDF files are allowed!');
+    return;
+  }
 
     // Ask for confirmation
     const ok = window.confirm('Are you sure that you will upload this file ?')
@@ -463,6 +503,7 @@ useEffect(() => {
       // update UI with selected file
       handleFileChange(id, file)
       alert('File updated successfully.')
+      location.reload();
     } else {
       alert('An error occurred while updating the file.')
     }
@@ -552,17 +593,11 @@ useEffect(() => {
             </h2>
             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>Unified Business Partner Platform</p>
           </div>
-          {/* <button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`p-2 md:p-3 rounded-lg transition-all duration-300 ${
-              darkMode
-                ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-            title="Toggle dark mode"
-          >
-            {darkMode ? '☀️' : '🌙'}
-          </button> */}
+          {/* Greeting instead of Dark Mode */}
+<div className="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-yellow-400">
+  Hello, {localStorage.getItem('fullname') || 'User'}
+</div>
+
 
            {/* Logout */}
     <button
@@ -578,12 +613,17 @@ useEffect(() => {
         </div>
 
         {/* Filters Card */}
-        <div className={`${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg rounded-xl p-3 sm:p-4 md:p-6 mb-4 md:mb-6 transition-all duration-300 animate-slideUp`}>
+       <div className={`${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg rounded-xl p-3 sm:p-4 md:p-6 mb-4 md:mb-6 transition-all duration-300 animate-slideUp`}>
           <div className="flex flex-col gap-3 md:gap-4">
             {/* Filter Type Buttons */}
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => { setFilterType('All'); setPage(1) }}
+                onClick={() => { 
+                  setFilterType('All'); 
+                  setPage(1); 
+                   setAppliedFilters(prev => ({ ...prev, filterType: 'All' }))
+                  //handleSearch() 
+                }}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   filterType === 'All'
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
@@ -595,7 +635,12 @@ useEffect(() => {
                 All
               </button>
               <button
-                onClick={() => { setFilterType('Vendors'); setPage(1) }}
+                onClick={() => { 
+                  setFilterType('Vendors'); 
+                  setPage(1);
+                   setAppliedFilters(prev => ({ ...prev, filterType: 'Vendors' }))
+                  //handleSearch() 
+                }}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   filterType === 'Vendors'
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
@@ -607,7 +652,12 @@ useEffect(() => {
                 Vendors
               </button>
               <button
-                onClick={() => { setFilterType('Customers'); setPage(1) }}
+                onClick={() => { 
+                  setFilterType('Customers'); 
+                  setPage(1);
+                   setAppliedFilters(prev => ({ ...prev, filterType: 'Customers' })) 
+                  //handleSearch()
+                 }}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                   filterType === 'Customers'
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
@@ -710,7 +760,15 @@ useEffect(() => {
                 <input
                   type="checkbox"
                   checked={blockedOnly}
-                  onChange={(e) => { setBlockedOnly(e.target.checked); setPage(1) }}
+                  onChange={(e) => { 
+                      const isChecked = e.target.checked
+                      setBlockedOnly(isChecked) // update checkbox UI
+                      setAppliedFilters(prev => ({
+                        ...prev,
+                        blockedOnly: isChecked, // apply filter
+                      }))
+                      setPage(1) 
+                  }}
                   className="cursor-pointer"
                 />
                 <span className="text-sm font-medium">Blocked Only</span>
@@ -794,9 +852,11 @@ useEffect(() => {
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold">
                   <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Status</span>
                 </th>
-                <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold">
-                  <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>File</span>
-                </th>
+                {role === 'Admin' && (
+                  <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold">
+                    <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>File</span>
+                  </th>
+                )}
                 <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold">
                   <span className={darkMode ? 'text-gray-200' : 'text-gray-700'}>Actions</span>
                 </th>
@@ -827,21 +887,26 @@ useEffect(() => {
                       {row.blocked ? 'Blocked' : 'Active'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs sm:text-sm">
-                    {!row.isFileAttached && role === 'Admin' && (
-                      <input
-                        type="file"
-                        id={`file-input-edit-${row.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => { e.stopPropagation(); handleFileSelect(row.id, e.target.files); }}
-                        className="text-xs"
-                      />
-                    )}
-                  </td>
+                  {role === 'Admin' && (
+                    <td className="px-4 py-3 text-xs sm:text-sm">
+                      {!row.isFileAttached && (
+                        <input
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          id={`file-input-edit-${row.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => { e.stopPropagation(); handleFileSelect(row.id, e.target.files); }}
+                          className="text-xs"
+                        />
+                      )}
+                    </td>
+                  )}
+
                   <td className="px-4 py-3 text-xs sm:text-sm">
   {/* Hidden file input */}
   <input
     type="file"
+    accept=".pdf,application/pdf"
     id={`file-upload-edit-${row.id}`}
     onClick={(e) => e.stopPropagation()}
     onChange={(e) => {
@@ -866,18 +931,18 @@ useEffect(() => {
       </button>
       )}
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleViewFile(row.id);
-        }}
-        className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm"
-      >
-        👁️ View
-      </button>
-    </div>
-  )}
-</td>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewFile(row.id);
+            }}
+            className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all duration-200 shadow-sm"
+          >
+            👁️ View
+          </button>
+        </div>
+      )}
+    </td>
 
                 </tr>
               ))}
@@ -968,71 +1033,102 @@ useEffect(() => {
       </div>
 
       {/* Details Modal - Responsive */}
-      {selectedRow && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 backdrop-blur-sm">
-          <div className={`${darkMode ? 'bg-slate-800' : 'bg-white'} rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto transition-all duration-300 animate-slideUp`}>
-            <div className={`sticky top-0 bg-gradient-to-r ${darkMode ? 'from-blue-900 to-blue-800' : 'from-blue-600 to-blue-700'} px-4 sm:px-6 py-3 sm:py-4 border-b border-opacity-20 border-white flex justify-between items-center z-10`}>
-              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white truncate">📋 Details - {selectedRow.partnerNumber}</h3>
-              <button onClick={() => setSelectedRow(null)} className={`rounded-full w-8 h-8 flex items-center justify-center text-2xl font-bold bg-opacity-30 hover:bg-opacity-50 transition-all duration-150 ${darkMode ? 'hover:bg-white' : 'hover:bg-white'} text-white`} aria-label="Close">×</button>
-            </div>
-            <div className="p-4 sm:p-6">
-              {/* Desktop Grid View */}
-              <div className="hidden sm:grid gap-4 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailRowDesktop label="Class" value={selectedRow.class} darkMode={darkMode} />
-                  <DetailRowDesktop label="Name" value={selectedRow.name3}/>
-                  <DetailRowDesktop label="BP Group" value={selectedRow.bpGroup} darkMode={darkMode} />
-                  <DetailRowDesktop label="Status" value={selectedRow.status} darkMode={darkMode} highlight={selectedRow.status !== 'Active'} />
-                  <DetailRowDesktop label="Telephone 1" value={selectedRow.telephone1} darkMode={darkMode} />
-                  <DetailRowDesktop label="Telephone 2" value={selectedRow.telephone2} darkMode={darkMode} />
-                  <DetailRowDesktop label="Fax Number" value={selectedRow.faxNumber} darkMode={darkMode} />
-                  <DetailRowDesktop label="Address" value={selectedRow.address} darkMode={darkMode} />
-                  <DetailRowDesktop label="Tax Status" value={selectedRow.taxStatus} darkMode={darkMode} />
-                  <DetailRowDesktop label="Commercial Tax ID" value={selectedRow.commercialTaxId || 'N/A'} darkMode={darkMode} />
-                  <DetailRowDesktop label="Tax ID" value={selectedRow.taxId} darkMode={darkMode} />
-                  <DetailRowDesktop label="Tax ID Valid From" value={selectedRow.taxIdValidFrom} darkMode={darkMode} />
-                  <DetailRowDesktop label="Tax ID Valid To" value={selectedRow.taxIdValidTo} darkMode={darkMode} />
-                  <DetailRowDesktop label="Tax ID Expire On" value={selectedRow.taxIdExpireOn} darkMode={darkMode} />
-                  <DetailRowDesktop label="Commercial ID Valid From" value={selectedRow.commercialIdValidFrom} darkMode={darkMode} />
-                  <DetailRowDesktop label="Commercial ID Valid To" value={selectedRow.commercialIdValidTo} darkMode={darkMode} />
-                  <DetailRowDesktop label="Commercial Tax ID Expire On" value={selectedRow.commercialTaxIdExpireOn} darkMode={darkMode} highlight={selectedRow.commercialTaxIdExpireOn === 'Expire'} />
-                  <DetailRowDesktop label="Block Reason" value={selectedRow.blockReason || 'N/A'} darkMode={darkMode} />
-                  <DetailRowDesktop label="Industry" value={selectedRow.industries || 'N/A'} darkMode={darkMode} />
-                  <DetailRowDesktop label="Company" value={selectedRow.companies || 'N/A'} darkMode={darkMode} />
-                </div>
-              </div>
+     {/* Professional Details Modal */}
+{/* Details Modal - Professional Version */}
+{selectedRow && (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div className={`${darkMode ? 'bg-slate-900' : 'bg-white'} w-full max-w-5xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-fadeIn`}>
 
-              {/* Mobile Stack View */}
-              <div className="sm:hidden space-y-3">
-                <DetailRow label="Class" value={selectedRow.class} />
-                <DetailRow label="Name" value={selectedRow.name1} />
-                <DetailRow label="BP Group" value={selectedRow.bpGroup} />
-                <DetailRow label="Status" value={selectedRow.status} highlight={selectedRow.status !== 'Active'} />
-                <DetailRow label="Telephone 1" value={selectedRow.telephone1} />
-                <DetailRow label="Telephone 2" value={selectedRow.telephone2} />
-                <DetailRow label="Fax Number" value={selectedRow.faxNumber} />
-                <DetailRow label="Address" value={selectedRow.address} />
-                <DetailRow label="Tax Status" value={selectedRow.taxStatus} />
-                <DetailRow label="Commercial Tax ID" value={selectedRow.commercialTaxId || 'N/A'} />
-                <DetailRow label="Tax ID" value={selectedRow.taxId} />
-                <DetailRow label="Tax ID Valid From" value={selectedRow.taxIdValidFrom} />
-                <DetailRow label="Tax ID Valid To" value={selectedRow.taxIdValidTo} />
-                <DetailRow label="Tax ID Expire On" value={selectedRow.taxIdExpireOn} />
-                <DetailRow label="Commercial ID Valid From" value={selectedRow.commercialIdValidFrom} />
-                <DetailRow label="Commercial ID Valid To" value={selectedRow.commercialIdValidTo} />
-                <DetailRow label="Commercial Tax ID Expire On" value={selectedRow.commercialTaxIdExpireOn} highlight={selectedRow.commercialTaxIdExpireOn === 'Expire'} />
-                <DetailRow label="Block Reason" value={selectedRow.blockReason || 'N/A'} />
-                  <DetailRowDesktop label="Industry" value={selectedRow.industries || 'N/A'} darkMode={darkMode} />
-                  <DetailRowDesktop label="Company" value={selectedRow.companies || 'N/A'} darkMode={darkMode} />
-              </div>
+      {/* Header */}
+      <div className={`sticky top-0 z-10 flex items-center justify-between px-6 py-4 rounded-t-2xl 
+        ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'} border-b`}>
 
-              <div className="mt-6">
-                <button onClick={() => setSelectedRow(null)} className={`w-full px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 ${darkMode ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' : 'border border-gray-300 hover:bg-gray-100 text-gray-700'}`}>Close</button>
-              </div>
-            </div>
-          </div>
+        <div>
+          <h3 className="text-xl font-bold">
+            Business Partner Details
+          </h3>
+          <p className="text-sm text-gray-500">
+            Partner No: {selectedRow.partnerNumber}
+          </p>
         </div>
-      )}
+
+        <button
+          onClick={() => setSelectedRow(null)}
+          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-700 transition"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="p-6 space-y-8">
+
+        {/* ================= GENERAL ================= */}
+        <Section title="General Information">
+          <Grid>
+            <Field label="Class" value={selectedRow.class} />
+            <Field label="Name" value={selectedRow.name3} />
+            <Field label="BP Group" value={selectedRow.bpGroup} />
+            <Field label="Status">
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold
+                ${selectedRow.status === 'Active'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-700'}`}>
+                {selectedRow.status}
+              </span>
+            </Field>
+            <Field label="Block Reason" value={selectedRow.blockReason || 'N/A'} />
+            <Field label="Industry" value={selectedRow.industries || 'N/A'} />
+            <Field label="Company" value={selectedRow.companies || 'N/A'} />
+          </Grid>
+        </Section>
+
+        {/* ================= CONTACT ================= */}
+        <Section title="Contact Information">
+          <Grid>
+            <Field label="Telephone 1" value={selectedRow.telephone1} />
+            <Field label="Telephone 2" value={selectedRow.telephone2} />
+            <Field label="Fax" value={selectedRow.faxNumber} />
+            <Field label="Address" value={selectedRow.address} full />
+          </Grid>
+        </Section>
+
+        {/* ================= TAX ================= */}
+        <Section title="Tax Information">
+          <Grid>
+            <Field label="Tax Status" value={selectedRow.taxStatus} />
+            <Field label="Tax ID" value={selectedRow.taxId} />
+            <Field label="Tax ID Valid From" value={selectedRow.taxIdValidFrom} />
+            <Field label="Tax ID Valid To" value={selectedRow.taxIdValidTo} />
+            <Field label="Tax ID Expire On" value={selectedRow.taxIdExpireOn} />
+            <Field label="Commercial Tax ID" value={selectedRow.commercialTaxId || 'N/A'} />
+          </Grid>
+        </Section>
+
+        {/* ================= COMMERCIAL ================= */}
+        <Section title="Commercial Registration">
+          <Grid>
+            <Field label="Commercial ID Valid From" value={selectedRow.commercialIdValidFrom} />
+            <Field label="Commercial ID Valid To" value={selectedRow.commercialIdValidTo} />
+            <Field label="Commercial Tax ID Expire On" value={selectedRow.commercialTaxIdExpireOn} />
+          </Grid>
+        </Section>
+
+        {/* Footer */}
+        <div className="pt-4 border-t flex justify-end">
+          <button
+            onClick={() => setSelectedRow(null)}
+            className="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 font-semibold transition"
+          >
+            Close
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+)}
+
+
 
       <div className={`flex flex-col sm:flex-row items-center justify-between mt-4 md:mt-6 gap-3 sm:gap-4 p-4 rounded-xl ${darkMode ? 'bg-slate-800' : 'bg-white'} shadow-lg animate-slideUp transition-all duration-300`}>
         <div className={`text-xs sm:text-sm text-center sm:text-left ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>

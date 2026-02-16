@@ -54,11 +54,12 @@ const SignIn = () => {
       setError("Invalid email or password");
       return;
     }
-setSuccess("Registration successful! Redirecting to home...");
+setSuccess("Login successful! Redirecting to home...");
 setTimeout(() => navigate("/datatable"), 1500);
       // Example: store token if returned
     localStorage.setItem("token", data.token);
     localStorage.setItem("role",data.role)
+    localStorage.setItem("fullname",data.fullName)
 
     } catch (err) {
       setError("Something went wrong");
