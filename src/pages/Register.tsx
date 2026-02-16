@@ -43,6 +43,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+     const navigate = useNavigate();
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -90,6 +91,7 @@ const Register = () => {
     }
 
       setSuccess("Registration successful! You can now login.");
+      setTimeout(() => navigate("/"), 1500);
 
     } catch (err) {
       setError("Server error. Please try again.");

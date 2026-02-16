@@ -54,7 +54,7 @@ const SignIn = () => {
       setError("Invalid email or password");
       return;
     }
-setSuccess("Registration successful! Redirecting to login...");
+setSuccess("Registration successful! Redirecting to home...");
 setTimeout(() => navigate("/datatable"), 1500);
       // Example: store token if returned
     localStorage.setItem("token", data.token);

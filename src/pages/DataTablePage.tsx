@@ -512,6 +512,7 @@ useEffect(() => {
       })
       .then(item => {
         const mapped: Row = mapPartnerToRow(item)
+       // console.log(mapped)
         setSelectedRow(mapped)
       })
       .catch(err => {
@@ -545,9 +546,9 @@ useEffect(() => {
         <div className="flex justify-between items-center mb-6 md:mb-8 animate-slideDown">
           <div>
             <h2 className={`text-xl sm:text-2xl lg:text-4xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Mastera SAP Vendors
+              Mastera Application
             </h2>
-            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>Manage and monitor your vendor database</p>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>Unified Business Partner Platform</p>
           </div>
           {/* <button
             onClick={() => setDarkMode(!darkMode)}
@@ -977,7 +978,7 @@ useEffect(() => {
               <div className="hidden sm:grid gap-4 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <DetailRowDesktop label="Class" value={selectedRow.class} darkMode={darkMode} />
-                  <DetailRowDesktop label="Name" value={selectedRow.name1} darkMode={darkMode} />
+                  <DetailRowDesktop label="Name" value={selectedRow.name1}/>
                   <DetailRowDesktop label="BP Group" value={selectedRow.bpGroup} darkMode={darkMode} />
                   <DetailRowDesktop label="Status" value={selectedRow.status} darkMode={darkMode} highlight={selectedRow.status !== 'Active'} />
                   <DetailRowDesktop label="Telephone 1" value={selectedRow.telephone1} darkMode={darkMode} />
