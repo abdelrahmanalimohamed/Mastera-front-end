@@ -95,11 +95,15 @@ function SearchableDropdown({
           if (query === '') setQuery(displayValue || value)
         }}
         placeholder={placeholder}
-        className="border rounded-lg px-3 py-2.5 text-sm transition-all duration-200 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white border-gray-300 text-gray-900"
+        style={{ colorScheme: 'light', backgroundColor: '#ffffff', color: '#111827' }}
+        className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm transition-all duration-200 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       />
 
       {open && (
-        <div className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md shadow-lg bg-white">
+        <div
+          style={{ colorScheme: 'light', backgroundColor: '#ffffff' }}
+          className="absolute z-50 mt-1 max-h-56 w-full overflow-auto rounded-md shadow-lg border border-gray-200"
+        >
           {filtered.length === 0 ? (
             <div className="px-3 py-2 text-sm text-gray-700">No results</div>
           ) : (
@@ -115,7 +119,8 @@ function SearchableDropdown({
                     setQuery(oName)
                     setOpen(false)
                   }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-blue-100 text-gray-900"
+                  style={{ color: '#111827' }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 bg-white"
                 >
                   {oName}
                 </button>
