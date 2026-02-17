@@ -167,6 +167,8 @@ type Row = {
   file?: FileRef | null
   address: string
   commercialId: string
+  vatEndDate: string
+  vatDaysLeft: number
   crEndDate: string
   crDaysLeft: number
   taxEndDate: string
@@ -181,12 +183,16 @@ type Row = {
   faxNumber: string
   taxStatus: string
   commercialTaxId: string | null
+  vatId: string | null
   taxIdValidFrom: string
   taxIdValidTo: string
   taxIdExpireOn: string
   commercialIdValidFrom: string
   commercialIdValidTo: string
   commercialTaxIdExpireOn: string
+  vatIdValidFrom: string
+  vatIdValidTo: string
+  vatIdExpireOn: string
   status: string
   isFileAttached: boolean
   industries: string
@@ -305,8 +311,11 @@ const mapPartnerToRow = (it: any): Row => ({
   file: null,
   address: it.address ?? '',
   commercialId: it.commercialId ?? '',
+  vatId: it.vatId ?? '',
   crEndDate: it.commercialIdValidTo ?? '',
   crDaysLeft: 0,
+  vatEndDate: it.vatIdValidTo ?? '',
+  vatDaysLeft: 0,
   taxEndDate: it.taxIdValidTo ?? '',
   taxDaysLeft: 0,
   email: '',
@@ -323,6 +332,9 @@ const mapPartnerToRow = (it: any): Row => ({
   commercialIdValidFrom: it.commercialIdValidFrom ?? '',
   commercialIdValidTo: it.commercialIdValidTo ?? '',
   commercialTaxIdExpireOn: it.commercialTaxIdExpireOn ?? '',
+  vatIdValidFrom: it.vatIdValidFrom ?? '',
+  vatIdValidTo: it.vatIdValidTo ?? '',
+  vatIdExpireOn: it.vatIdExpireOn ?? '',
   status: it.status ?? 'Active',
   isFileAttached: it.isFileAttached ?? false,
   industries: it.industries ?? '',
@@ -1100,16 +1112,27 @@ useEffect(() => {
             <Field label="Tax ID Valid From" value={selectedRow.taxIdValidFrom} />
             <Field label="Tax ID Valid To" value={selectedRow.taxIdValidTo} />
             <Field label="Tax ID Expire On" value={selectedRow.taxIdExpireOn} />
-            <Field label="Commercial Tax ID" value={selectedRow.commercialTaxId || 'N/A'} />
+           
           </Grid>
         </Section>
 
         {/* ================= COMMERCIAL ================= */}
         <Section title="Commercial Registration">
           <Grid>
+             <Field label="Commercial Tax ID" value={selectedRow.commercialTaxId || 'N/A'} />
             <Field label="Commercial ID Valid From" value={selectedRow.commercialIdValidFrom} />
             <Field label="Commercial ID Valid To" value={selectedRow.commercialIdValidTo} />
             <Field label="Commercial Tax ID Expire On" value={selectedRow.commercialTaxIdExpireOn} />
+          </Grid>
+        </Section>
+
+          {/* ================= VAT ================= */}
+        <Section title="VAT Registration">
+          <Grid>
+            <Field label="VAT ID" value={selectedRow.vatId || 'N/A'} />
+            <Field label="VAT ID Valid From" value={selectedRow.vatIdValidFrom} />
+            <Field label="VAT ID Valid To" value={selectedRow.vatIdValidTo} />
+            <Field label="VAT ID Expire On" value={selectedRow.vatIdExpireOn} />
           </Grid>
         </Section>
 
