@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { API_BASE_URL } from "../config/constants";
 import { Link, useNavigate } from "react-router-dom";
+import plogo from "../assets/logo/plogo.png";
 
 
 const companies = [
@@ -108,7 +109,8 @@ const Register = () => {
       >
         <a href="/" className="mb-8 self-start" title="Go to Home">
     <img
-      src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQiWSHo3egzpXlUV8tNe2spORVNOA-NsfJyiA&s"
+    src={plogo}
+     // src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQiWSHo3egzpXlUV8tNe2spORVNOA-NsfJyiA&s"
       alt="Mastera Logo"
       className="h-24 w-24 object-contain"
     />
