@@ -2,16 +2,6 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { API_BASE_URL } from '../config/constants'
 import { suppliesList, type Supply } from '../config/supplies'
 
-// Helper component for desktop detail rows
-const DetailRowDesktop = ({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) => (
-  <div className="animate-slideUp">
-    <label className="text-xs font-semibold uppercase block mb-2 text-gray-600">{label}</label>
-    <p className={`text-sm break-words ${highlight ? 'text-red-600' : 'text-gray-900'}`}>
-      {value}
-    </p>
-  </div>
-)
-
 const Section = ({ title, children }: any) => (
   <div>
     <h1 className="text-sm font-extrabold uppercase tracking-wide text-gray-500 mb-4 border-b pb-2">
@@ -232,7 +222,7 @@ export default function DataTablePage() {
   const perPage = 10
 
   const [loading, setLoading] = useState<boolean>(false)
-  const [cursor, setCursor] = useState<number | null>(null)
+ // const [cursor, setCursor] = useState<number | null>(null)
   const [hasNextPage, setHasNextPage] = useState(false)
 
   const companiesList = useMemo(() => Array.from(new Set(companies)).sort(), [])
@@ -358,7 +348,7 @@ export default function DataTablePage() {
     if (filtersChanged) {
       setPrevFilters({ query, taxIdQuery, sapCodeQuery, roleFilter, supplyFilter, filterType })
       setPage(1)
-      setCursor(null)
+      //setCursor(null)
     }
   }, [query, taxIdQuery, roleFilter, supplyFilter, filterType, prevFilters])
 
@@ -702,7 +692,7 @@ export default function DataTablePage() {
                   })
                   setPage(1)
                   setPageCursors([null])
-                  setCursor(null)
+                //  setCursor(null)
                 }}
                 className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700"
               >
