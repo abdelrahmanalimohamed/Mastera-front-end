@@ -529,6 +529,47 @@ export default function DataTablePage() {
     setPageCursors([null])
   }
 
+  const handleExportExcel = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams()
+
+      if (appliedFilters.query) params.set('VendorName', appliedFilters.query)
+      if (appliedFilters.sapCodeQuery) params.set('SAPCode', appliedFilters.sapCodeQuery)
+      if (appliedFilters.taxIdQuery) params.set('TaxId', appliedFilters.taxIdQuery)
+      if (appliedFilters.roleFilter) params.set('CompanyCode', appliedFilters.roleFilter.split(' - ')[0])
+      if (appliedFilters.supplyFilter) params.set('Industry', appliedFilters.supplyFilter)
+      if (appliedFilters.blockedOnly) params.set('BlockedOnly', 'true')
+
+      if (appliedFilters.filterType === 'Vendors') {
+        params.set('IndustryName', 'Vend')
+      } else if (appliedFilters.filterType === 'Customers') {
+        params.set('IndustryName', 'Cust')
+      }
+
+      const response = await fetch(`${API_BASE_URL}/BusinessPartner/generate-excel?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to export Excel')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'BusinessPartners.xlsx'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Failed to export Excel. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 transition-colors duration-300">
       <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 max-w-7xl mx-auto w-full">
@@ -670,6 +711,13 @@ export default function DataTablePage() {
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-blue-800 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 🔍 Search
+              </button>
+              <button
+                onClick={handleExportExcel}
+                disabled={loading}
+                className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:from-green-700 hover:to-green-800 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
+              >
+                📊 Export Excel
               </button>
               <button
                 onClick={() => {

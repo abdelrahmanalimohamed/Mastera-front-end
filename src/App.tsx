@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DataTablePage from "./pages/DataTablePage";
 import SignIn from "./pages/SignIn";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
@@ -11,6 +13,8 @@ function App() {
       <Routes>
         <Route path="/" element={<SignIn />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgotpassword" element={<ForgotPassword />} />
+        <Route path="/resetpassword" element={<ResetPassword />} />
 
         <Route
           path="/datatable"

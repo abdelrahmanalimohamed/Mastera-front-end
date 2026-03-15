@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { API_BASE_URL } from "../config/constants";
 import { Link, useNavigate } from "react-router-dom";
-import plogo from "../assets/logo/plogo.png";
+ import plogo from "../assets/logo/plogo.png";
 
 
 const SignIn = () => {
@@ -57,7 +57,7 @@ const SignIn = () => {
     }
 setSuccess("Login successful! Redirecting to home...");
 setTimeout(() => navigate("/datatable"), 1500);
-      // Example: store token if returned
+
     localStorage.setItem("token", data.token);
     localStorage.setItem("role",data.role)
     localStorage.setItem("fullname",data.fullName)
@@ -120,6 +120,12 @@ setTimeout(() => navigate("/datatable"), 1500);
             placeholder="Enter your password"
             className="mt-2 w-full rounded-md border border-gray-300 px-3 py-3 outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600"
           />
+        </div>
+
+        <div className="mt-2 text-right">
+          <Link to="/forgotpassword" className="text-sm text-indigo-600 hover:underline">
+            Forgot Password?
+          </Link>
         </div>
 
         {error && (

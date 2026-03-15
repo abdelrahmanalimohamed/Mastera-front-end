@@ -91,8 +91,8 @@ const Register = () => {
       return;
     }
 
-      setSuccess("Registration successful! You can now login.");
-      setTimeout(() => navigate("/"), 1500);
+      setSuccess("RYour account has been successfully created and is currently pending activation. Please check your email .\nتم إنشاء حسابك بنجاح، وحالياً بانتظار التفعيل. يرجى مراجعة بريدك الإلكتروني .");
+      setTimeout(() => navigate("/"), 6000);
 
     } catch (err) {
       setError("Server error. Please try again.");
