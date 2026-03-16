@@ -23,51 +23,51 @@ const SignIn = () => {
     }));
   };
 
-  const handleSubmit = async (e : any) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+  const handleSubmit = async (e: any) => {
+  e.preventDefault();
+  setError(null);
+  setLoading(true);
 
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/SysUser/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: formData.email,     // Must match C# record
-            password: formData.password,
-          }),
-        }
-      );
+  try {
+    const response = await fetch(`${API_BASE_URL}/SysUser/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+      }),
+    });
 
-      if (!response.ok) {
-        throw new Error("Invalid email or password");
-      }
+    const data = await response.json(); // read response body
 
-      const data = await response.json();
-
-      console.log("Login Success:", data);
-
-      if (!data.isSuccess) {
-      setError("Invalid email or password");
+    if (!response.ok) {
+      setError(data.message); // <-- message from backend exception
       return;
     }
-setSuccess("Login successful! Redirecting to home...");
-setTimeout(() => navigate("/datatable"), 1500);
+
+   // console.log("Login Success:", data);
+
+    if (!data.isSuccess) {
+      setError(data.message);
+      return;
+    }
+
+    setSuccess("Login successful! Redirecting to home...");
+    setTimeout(() => navigate("/datatable"), 1500);
 
     localStorage.setItem("token", data.token);
-    localStorage.setItem("role",data.role)
-    localStorage.setItem("fullname",data.fullName)
+    localStorage.setItem("role", data.role);
+    localStorage.setItem("fullname", data.fullName);
 
-    } catch (err) {
-      setError("Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (err) {
+    setError("Something went wrong");
+    console.error("Login Error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <main className="flex min-h-screen items-center justify-center w-full px-4 bg-gray-50">
