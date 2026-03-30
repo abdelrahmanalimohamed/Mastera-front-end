@@ -47,10 +47,8 @@ const SignIn = () => {
       return;
     }
 
-   // console.log("Login Success:", data);
-
     if (!data.isSuccess) {
-      setError(data.message);
+      setError("Invalid email or password");
       return;
     }
 
