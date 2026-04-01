@@ -224,6 +224,13 @@ export default function DataTablePage() {
   const [loading, setLoading] = useState<boolean>(false)
  // const [cursor, setCursor] = useState<number | null>(null)
   const [hasNextPage, setHasNextPage] = useState(false)
+  
+  const [counts, setCounts] = useState({
+    countByCompanyCode: 0,
+    countByCategory: 0,
+    countByBlockedStatus: 0,
+    countByActiveStatus: 0,
+  })
 
   const companiesList = useMemo(() => Array.from(new Set(companies)).sort(), [])
 
@@ -261,6 +268,16 @@ export default function DataTablePage() {
     }
 
     return params.toString()
+  }
+
+  const buildCountQueryParams = () => {
+    const params = new URLSearchParams()
+  
+  if (roleFilter) params.set('CompanyCode', roleFilter.split(' - ')[0])
+  if (supplyFilter) params.set('Category', supplyFilter)
+  if (blockedOnly) params.set('Status', 'Blocked')
+
+  return params.toString()
   }
 
   const mapPartnerToRow = (it: any): Row => ({
@@ -314,6 +331,23 @@ export default function DataTablePage() {
     companies: it.companies ?? '',
   })
 
+  const fetchCounts = useCallback(async () => {
+    try {
+      const qs = buildCountQueryParams()
+      const res = await fetch(`${API_BASE_URL}/BusinessPartner/count?${qs}`)
+      const json = await res.json()
+      
+      setCounts({
+        countByCompanyCode: json.countByCompanyCode || 0,
+        countByCategory: json.countByCategory || 0,
+        countByActiveStatus : json.countByActiveStatus || 0,
+        countByBlockedStatus: json.countByBlockedStatus || 0,
+      })
+    } catch (err) {
+      console.error('Failed to fetch counts:', err)
+    }
+  }, [roleFilter , supplyFilter, blockedOnly])
+
   const fetchPartners = useCallback(async (
     pageIndex: number,
     cursorForPage: number | null
@@ -356,6 +390,10 @@ export default function DataTablePage() {
     const cursorForPage = pageCursors[page - 1] ?? null
     fetchPartners(page - 1, cursorForPage)
   }, [page, appliedFilters])
+
+  useEffect(() => {
+    fetchCounts()
+  }, [fetchCounts])
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -597,6 +635,69 @@ export default function DataTablePage() {
           >
             Logout
           </button>
+        </div>
+
+        {/* Count Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 md:mb-8 animate-slideUp">
+          {/* Total Vendors Card */}
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl shadow-lg p-5 transition-all duration-300 hover:shadow-xl hover:scale-105">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium opacity-90">Total Count by Company Code</p>
+                <p className="text-3xl font-bold mt-2">{counts.countByCompanyCode.toLocaleString()}</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Customers Card */}
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl shadow-lg p-5 transition-all duration-300 hover:shadow-xl hover:scale-105">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium opacity-90">Total Count By Category</p>
+                <p className="text-3xl font-bold mt-2">{counts.countByCategory.toLocaleString()}</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Active Card */}
+          <div className="bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl shadow-lg p-5 transition-all duration-300 hover:shadow-xl hover:scale-105">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium opacity-90">Total Active</p>
+                <p className="text-3xl font-bold mt-2">{counts.countByActiveStatus.toLocaleString()}</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Total Blocked Card */}
+          <div className="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl shadow-lg p-5 transition-all duration-300 hover:shadow-xl hover:scale-105">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium opacity-90">Total Blocked</p>
+                <p className="text-3xl font-bold mt-2">{counts.countByBlockedStatus.toLocaleString()}</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Filters Card */}
