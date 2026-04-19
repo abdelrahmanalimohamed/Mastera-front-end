@@ -232,6 +232,12 @@ export default function DataTablePage() {
     countByActiveStatus: 0,
   })
 
+   const [expireCounts, setExpireCounts] = useState({
+    commercialExpiredCount: 0,
+    taxIdExpiredCount: 0,
+    vatExpiredCount: 0
+  })
+
   const companiesList = useMemo(() => Array.from(new Set(companies)).sort(), [])
 
   const [prevFilters, setPrevFilters] = useState({ query, taxIdQuery, sapCodeQuery, roleFilter, supplyFilter, filterType })
@@ -348,6 +354,21 @@ export default function DataTablePage() {
     }
   }, [roleFilter , supplyFilter, blockedOnly])
 
+  const fetchExpireCounts = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/BusinessPartner/countExpire`)
+      const json = await res.json()
+      
+      setExpireCounts({
+        commercialExpiredCount: json.commercialExpiredCount || 0,
+        taxIdExpiredCount: json.taxIdExpiredCount || 0,
+        vatExpiredCount: json.vatExpiredCount  || 0
+      })
+    } catch (err) {
+      console.error('Failed to fetch counts:', err)
+    }
+  }, [])
+
   const fetchPartners = useCallback(async (
     pageIndex: number,
     cursorForPage: number | null
@@ -394,6 +415,10 @@ export default function DataTablePage() {
   useEffect(() => {
     fetchCounts()
   }, [fetchCounts])
+
+  useEffect(() => {
+    fetchExpireCounts()
+  }, [fetchExpireCounts])
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
@@ -608,6 +633,47 @@ export default function DataTablePage() {
     }
   }
 
+const handleExpireExportExcel = async () => {
+  try {
+    setLoading(true);
+
+    const response = await fetch(
+      `${API_BASE_URL}/BusinessPartner/get-expiring-soon`,
+      {
+        method: "GET",
+        headers: {
+          Accept:
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to export Excel");
+    }
+
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `BusinessPartnersExpireSoon_${new Date()
+      .toISOString()
+      .slice(0, 10)}.xlsx`;
+
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Export error:", error);
+    alert("Failed to export Excel. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
     <div className="min-h-screen bg-gray-50 transition-colors duration-300">
       <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6 max-w-7xl mx-auto w-full">
@@ -696,6 +762,37 @@ export default function DataTablePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                 </svg>
               </div>
+            </div>
+          </div>
+
+          
+          {/* Total Blocked Card */}
+          <div 
+          onClick={handleExpireExportExcel}
+          className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-xl shadow-lg p-5 transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium opacity-90">Expiration Before 100 Days</p>
+                <p className="text-sm font-bold mt-2">VAT ID : {expireCounts.vatExpiredCount.toLocaleString()}</p>
+                <p className="text-sm font-bold mt-2">TAX ID : {expireCounts.taxIdExpiredCount.toLocaleString()}</p>
+                <p className="text-sm font-bold mt-2">COR ID : {expireCounts.commercialExpiredCount.toLocaleString()}</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v4m0 4h.01"
+                    />
+                  </svg>
+                </div>
             </div>
           </div>
         </div>
