@@ -70,17 +70,21 @@ const Register = () => {
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
+  
     e.preventDefault();
     setError(null);
     setSuccess(null);
-    setLoading(true);
-    
+
     const domain = formData.email.split('@')[1]?.toLowerCase();
 
     if (!domain || !allowedDomains.includes(domain)) {
       setError('Email domain is not allowed.');
       return;
     }
+
+    setLoading(true);
+    
+ 
 
     try {
       const response = await fetch(
