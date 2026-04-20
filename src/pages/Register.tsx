@@ -56,11 +56,31 @@ const Register = () => {
     }));
   };
 
+    const allowedDomains = [
+    'siac-construction.com',
+    'siac-egypt.com',
+    'siac.com.eg',
+    'siacdevelopments.com',
+    'siacholding.com',
+    'siacfm.com',
+    'wajhataap.com',
+    'edge-esw.com',
+    'integ-siac.com',
+    'siac-egypt.com',
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
     setLoading(true);
+    
+    const domain = formData.email.split('@')[1]?.toLowerCase();
+
+    if (!domain || !allowedDomains.includes(domain)) {
+      setError('Email domain is not allowed.');
+      return;
+    }
 
     try {
       const response = await fetch(

@@ -33,6 +33,7 @@ function SearchableDropdown({
   options,
   value,
   onChange,
+  
   placeholder = 'Select...',
   displayValue = '',
 }: {
@@ -766,40 +767,64 @@ const handleExpireExportExcel = async () => {
           </div>
 
           
-          {/* Total Blocked Card */}
-          <div 
-          onClick={handleExpireExportExcel}
-          className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white rounded-xl shadow-lg p-5 transition-all duration-300 hover:shadow-xl hover:scale-105 cursor-pointer">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium opacity-90">Expiration Before 100 Days</p>
-                <p className="text-sm font-bold mt-2">VAT ID : {expireCounts.vatExpiredCount.toLocaleString()}</p>
-                <p className="text-sm font-bold mt-2">TAX ID : {expireCounts.taxIdExpiredCount.toLocaleString()}</p>
-                <p className="text-sm font-bold mt-2">COR ID : {expireCounts.commercialExpiredCount.toLocaleString()}</p>
-              </div>
-              <div className="bg-white bg-opacity-20 rounded-full p-3">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v4m0 4h.01"
-                    />
-                  </svg>
-                </div>
-            </div>
+          {/* Expiring Soon Banner */}
+<div
+  onClick={handleExpireExportExcel}
+  className="sm:col-span-2 lg:col-span-4 cursor-pointer group"
+>
+  <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 rounded-xl shadow-lg p-5 transition-all duration-300 hover:shadow-xl hover:scale-[1.01]">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      
+      {/* Left: Title + subtitle */}
+      <div className="flex items-center gap-3">
+        <div className="bg-white bg-opacity-20 rounded-full p-3 shrink-0">
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-white font-bold text-base leading-tight">Expiring Within 100 Days</p>
+          <p className="text-white text-opacity-80 text-xs mt-0.5 opacity-80">Click to export expiring partners report</p>
+        </div>
+      </div>
+
+      {/* Center: 3 stat pills */}
+      <div className="flex flex-wrap gap-3">
+        {[
+          { label: 'VAT ID', value: expireCounts.vatExpiredCount },
+          { label: 'TAX ID', value: expireCounts.taxIdExpiredCount },
+          { label: 'COR ID', value: expireCounts.commercialExpiredCount },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-white bg-opacity-20 rounded-lg px-4 py-2 text-center min-w-[80px]">
+            <p className="text-white text-opacity-80 text-xs font-medium opacity-80">{label}</p>
+            <p className="text-white font-extrabold text-xl leading-tight">{value.toLocaleString()}</p>
           </div>
+        ))}
+      </div>
+
+      {/* Right: Export arrow */}
+      <div className="hidden sm:flex items-center gap-2 text-white opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200 text-sm font-semibold shrink-0">
+        Export Excel
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+
+    </div>
+  </div>
+</div>
         </div>
 
         {/* Filters Card */}
         <div className="bg-white shadow-lg rounded-xl p-3 sm:p-4 md:p-6 mb-4 md:mb-6 transition-all duration-300 animate-slideUp">
-          <div className="flex flex-col gap-3 md:gap-4">
+          <form 
+            onSubmit={(e) => {
+                e.preventDefault()
+                handleSearch()
+              }}
+          className="flex flex-col gap-3 md:gap-4">
 
             {/* Filter Type Buttons */}
             <div className="flex flex-wrap gap-2">
@@ -829,6 +854,7 @@ const handleExpireExportExcel = async () => {
                 <select
                   value={roleFilter}
                   onChange={e => setRoleFilter(e.target.value)}
+                 
                   className="border rounded-lg px-3 py-2.5 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white border-gray-300 text-gray-900"
                 >
                   <option value="">All Companies</option>
@@ -905,13 +931,15 @@ const handleExpireExportExcel = async () => {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button
-                onClick={handleSearch}
+                //onClick={handleSearch}
+                 type="submit" 
                 className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-blue-800 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg"
               >
                 🔍 Search
               </button>
               <button
                 onClick={handleExportExcel}
+                type="button"
                 disabled={loading}
                 className="bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:from-green-700 hover:to-green-800 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
               >
@@ -940,12 +968,13 @@ const handleExpireExportExcel = async () => {
                   setPageCursors([null])
                 //  setCursor(null)
                 }}
+                type='button'
                 className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 bg-gray-200 hover:bg-gray-300 text-gray-700"
               >
                 ↺ Reset
               </button>
             </div>
-          </div>
+          </form>
         </div>
 
         {/* Data Table */}
